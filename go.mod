@@ -1,4 +1,4 @@
-module basic_database
+module gnosql
 
 go 1.20
 

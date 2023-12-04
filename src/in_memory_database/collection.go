@@ -1,10 +1,12 @@
 package in_memory_database
 
 import (
-	"basic_database/src/utils"
 	"fmt"
+	"gnosql/src/utils"
 	"sync"
 )
+
+type GenericKeyValue map[string]interface{}
 
 type IndexValue map[string][]string
 
@@ -76,6 +78,43 @@ func (db *Collection) Read(id string) interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	return db.data[id]
+}
+
+func (db *Collection) Filter(request GenericKeyValue) interface{} {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	var results []interface{}
+
+	for _, eachData := range db.data {
+		if value, ok := eachData.(DocumentInput)[request["key"].(string)]; ok {
+			if value == request["value"].(string) {
+				results = append(results, eachData)
+			}
+		}
+	}
+	return results
+
+}
+
+func (db *Collection) FilterByIndexKey(request GenericKeyValue) interface{} {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	if indexMap, exists := db.index[request["key"].(string)]; exists {
+
+		if ids, exists := indexMap[request["value"].(string)]; exists {
+			var results []interface{}
+			for _, eachId := range ids {
+				results = append(results, db.data[eachId])
+			}
+
+			return results
+		}
+
+	}
+
+	return "data not found"
 }
 
 func (db *Collection) Update(id string, updateInputData DocumentInput) interface{} {
@@ -162,7 +201,7 @@ func (db *Collection) createIndex(body DocumentInput) {
 	}
 }
 
-func (db *Collection) updateIndex(oldData DocumentInput, updatedData DocumentInput) {
+func (db *Collection) updateIndex(oldData, updatedData DocumentInput) {
 	for _, eachIndex := range db.indexKeys {
 		if oldIndexValue, ok := oldData[eachIndex]; ok {
 			if newIndexValue, ok := updatedData[eachIndex]; ok {

@@ -1,11 +1,12 @@
 package seed
 
 import (
-	"basic_database/src/in_memory_database"
-	"basic_database/src/router"
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"gnosql/src/in_memory_database"
+	"gnosql/src/router"
 	"math/rand"
+
+	"github.com/gin-gonic/gin"
 )
 
 func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
@@ -30,7 +31,7 @@ func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
 	category := []string{"Food", "Grocery", "Decoration"}
 
 	// Initialize the array with unique usernames and passwords
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 10000; i++ {
 		user := make(in_memory_database.DocumentInput)
 		user["userName"] = fmt.Sprintf("user%d", i+1)
 		user["pwd"] = fmt.Sprintf("password%d", i+1)
@@ -42,7 +43,7 @@ func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
 		userId := userResult["id"]
 
 		orderInstance, _ := db.GetCollection(OrderCollection.CollectionName)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 2; i++ {
 			order := make(in_memory_database.DocumentInput)
 			order["userId"] = userId
 			order["category"] = category[rand.Intn(len(category))]
