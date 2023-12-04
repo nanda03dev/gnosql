@@ -1,4 +1,4 @@
-# Basic NoSQL Database App
+<p align="center">Basic NoSQL Database App</p>
 
 This is a simple NoSQL database application written in Golang. It demonstrates how to create, read, update, and delete data in a NoSQL database.
 
