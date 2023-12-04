@@ -1,0 +1,49 @@
+
+for indexName, indexMap := range db.index {
+	dynamicMap := make(indexValueType)
+	for indexValue, ids := range indexMap {
+		dynamicMap[indexValue] = ids
+	}
+	details[indexName] = dynamicMap
+}
+
+{
+	"name": {
+		"kumar": [
+			"88248ce5-4a41-4794-83fc-ff7fa359bc32"
+		],
+		"nanda": [
+			"a864baa1-5807-4ca6-bbf7-0603f2d1a001"
+		]
+	}
+}
+
+details := make([]map[string]interface{}, 0, 1000)
+for indexName, indexMap := range db.index {
+	println("indexName ", indexName)
+	fmt.Printf("indexMap with interface{} values: %v\n", indexMap)
+
+	for indexValue, ids := range indexMap {
+		fmt.Printf("indexValue with interface{} values: %v\n", indexValue)
+		dynamicMap := make(map[string]interface{})
+		dynamicMap["index"] = indexName
+		dynamicMap["key"] = indexValue
+		dynamicMap["ids"] = ids
+
+		// data := {index: indexName, key: indexValue}
+		details = append(details, dynamicMap)
+	}
+}
+
+
+[
+    {
+        "ids": [
+            "698f7be6-7254-4716-8b59-0ae0a161e95c"
+        ],
+        "index": "name",
+        "key": "nanda"
+    }
+]
+
+

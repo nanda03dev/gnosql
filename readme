@@ -1,49 +1,46 @@
+# Basic NoSQL Database App
 
-for indexName, indexMap := range db.index {
-	dynamicMap := make(indexValueType)
-	for indexValue, ids := range indexMap {
-		dynamicMap[indexValue] = ids
-	}
-	details[indexName] = dynamicMap
-}
+This is a simple NoSQL database application written in Golang. It demonstrates how to create, read, update, and delete data in a NoSQL database.
 
-{
-	"name": {
-		"kumar": [
-			"88248ce5-4a41-4794-83fc-ff7fa359bc32"
-		],
-		"nanda": [
-			"a864baa1-5807-4ca6-bbf7-0603f2d1a001"
-		]
-	}
-}
+## Prerequisites
 
-details := make([]map[string]interface{}, 0, 1000)
-for indexName, indexMap := range db.index {
-	println("indexName ", indexName)
-	fmt.Printf("indexMap with interface{} values: %v\n", indexMap)
+To run this application, you will need the following:
 
-	for indexValue, ids := range indexMap {
-		fmt.Printf("indexValue with interface{} values: %v\n", indexValue)
-		dynamicMap := make(map[string]interface{})
-		dynamicMap["index"] = indexName
-		dynamicMap["key"] = indexValue
-		dynamicMap["ids"] = ids
+- Golang installed
 
-		// data := {index: indexName, key: indexValue}
-		details = append(details, dynamicMap)
-	}
-}
+## Installation
 
+To install this application, follow these steps:
 
-[
-    {
-        "ids": [
-            "698f7be6-7254-4716-8b59-0ae0a161e95c"
-        ],
-        "index": "name",
-        "key": "nanda"
-    }
-]
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/your-username/your-repo.git
+   ```
 
+2. Run the following command to install the dependencies:
+   ```bash
+   go mod download
+   ```
 
+## Usage
+
+To run the application, you will need to configure the connection to your NoSQL database. Edit the `config.json` file, replacing the placeholder values with the actual connection details for your database.
+
+Once configured, run the application with the following command:
+```bash
+go run main.go
+```
+
+The application will start and listen for connections on port 8080. Use an HTTP client to send requests to the application. For example, to create a new user, send the following POST request:
+```bash
+curl -X POST http://localhost:8080/users -d '{ "name": "John Doe", "email": "johndoe@example.com" }'
+```
+
+To get a list of all users, send the following GET request:
+```bash
+curl http://localhost:8080/users
+```
+
+## Contributing
+
+If you would like to contribute to this project, please fork this repository and create a pull request. Ensure that you follow the project's style guide and guidelines.
