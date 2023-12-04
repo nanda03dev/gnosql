@@ -5,8 +5,9 @@ import (
 	"basic_database/src/router"
 	"basic_database/src/seed"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
