@@ -80,41 +80,71 @@ func (db *Collection) Read(id string) interface{} {
 	return db.data[id]
 }
 
-func (db *Collection) Filter(request GenericKeyValue) interface{} {
+func (db *Collection) Filter(filters []GenericKeyValue) interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
 	var results []interface{}
 
 	for _, eachData := range db.data {
-		if value, ok := eachData.(DocumentInput)[request["key"].(string)]; ok {
-			if value == request["value"].(string) {
-				results = append(results, eachData)
+		isMatch := true
+		for _, filter := range filters {
+			if value, ok := eachData.(DocumentInput)[filter["key"].(string)]; ok {
+				if value != filter["value"].(string) {
+					isMatch = false
+					break
+				}
 			}
 		}
+		if isMatch {
+			results = append(results, eachData)
+		}
+
 	}
 	return results
 
 }
 
-func (db *Collection) FilterByIndexKey(request GenericKeyValue) interface{} {
+func (db *Collection) FilterByIndexKey(request []GenericKeyValue) interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	if indexMap, exists := db.index[request["key"].(string)]; exists {
+	var results = make([]interface{}, 0)
 
-		if ids, exists := indexMap[request["value"].(string)]; exists {
-			var results []interface{}
-			for _, eachId := range ids {
-				results = append(results, db.data[eachId])
+	isNotStarted := false
+
+	resultIds := make(map[string]bool)
+
+outerLoop:
+	for _, eachIndexMap := range request {
+		if indexMap, exists := db.index[eachIndexMap["key"].(string)]; exists {
+			if ids, exists := indexMap[eachIndexMap["value"].(string)]; exists {
+				if !isNotStarted {
+					for _, eachId := range ids {
+						resultIds[eachId] = true
+					}
+					isNotStarted = true
+				} else {
+					tempIds := make(map[string]bool)
+					for _, eachId := range ids {
+						if resultIds[eachId] {
+							tempIds[eachId] = true
+						}
+					}
+					if len(tempIds) == 0 {
+						break outerLoop
+					}
+					resultIds = tempIds
+				}
 			}
-
-			return results
 		}
-
 	}
 
-	return "data not found"
+	for eachId := range resultIds {
+		results = append(results, db.data[eachId])
+	}
+
+	return results
 }
 
 func (db *Collection) Update(id string, updateInputData DocumentInput) interface{} {

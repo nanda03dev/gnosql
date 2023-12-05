@@ -134,7 +134,7 @@ func generateRoutes(router *gin.Engine, db *in_memory_database.Collection) {
 			return
 		}
 
-		var value in_memory_database.GenericKeyValue
+		var value []in_memory_database.GenericKeyValue
 
 		if err := c.BindJSON(&value); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -153,7 +153,7 @@ func generateRoutes(router *gin.Engine, db *in_memory_database.Collection) {
 			return
 		}
 
-		var value in_memory_database.GenericKeyValue
+		var value []in_memory_database.GenericKeyValue
 
 		if err := c.BindJSON(&value); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
