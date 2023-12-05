@@ -57,7 +57,7 @@ func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
 	category := []string{"Food", "Grocery", "Decoration"}
 
 	// Initialize the array with unique usernames and passwords
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		user := make(in_memory_database.DocumentInput)
 		user["userName"] = fmt.Sprintf("user%d", i+1)
 		user["pwd"] = fmt.Sprintf("password%d", i+1)

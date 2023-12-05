@@ -12,7 +12,9 @@ type IndexValue map[string][]string
 
 type Index map[string]IndexValue
 
-type Data map[string]interface{}
+type DataMap map[string]interface{}
+
+type Document map[string]interface{}
 
 type DocumentInput map[string]interface{}
 
@@ -22,7 +24,7 @@ type Collection struct {
 	index          Index    // index map Ex: {"city" :{ chennai: [id1, ids2]}}
 	indexKeys      []string // index keys ["city"]
 	mu             sync.RWMutex
-	data           Data
+	dataMap        DataMap
 }
 
 type CollectionInput struct {
@@ -39,7 +41,7 @@ func CreateCollections(collectionsInput []CollectionInput) CollectionOutput {
 		collectionInstance := &Collection{
 			collectionName: collectionInput.CollectionName,
 			indexKeys:      collectionInput.IndexKeys,
-			data:           make(Data),
+			dataMap:        make(DataMap),
 			index:          make(Index),
 			mu:             sync.RWMutex{},
 			deleted:        false,
@@ -67,7 +69,7 @@ func (db *Collection) Create(value DocumentInput) interface{} {
 
 	value["id"] = uniqueUuid
 	value["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
-	db.data[uniqueUuid] = value
+	db.dataMap[uniqueUuid] = value
 
 	db.createIndex(value)
 
@@ -77,7 +79,7 @@ func (db *Collection) Create(value DocumentInput) interface{} {
 func (db *Collection) Read(id string) interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
-	return db.data[id]
+	return db.dataMap[id]
 }
 
 func (db *Collection) Filter(filters []GenericKeyValue) interface{} {
@@ -86,9 +88,36 @@ func (db *Collection) Filter(filters []GenericKeyValue) interface{} {
 
 	var results []interface{}
 
-	for _, eachData := range db.data {
+	filtersWithoutIndex := make([]GenericKeyValue, 0)
+	filtersWithIndex := make([]GenericKeyValue, 0)
+
+outerLoop:
+	for _, filter := range filters {
+		for _, indexKey := range db.indexKeys {
+			if indexKey == filter["key"] {
+				filtersWithIndex = append(filtersWithIndex, filter)
+				continue outerLoop
+			}
+		}
+		filtersWithoutIndex = append(filtersWithoutIndex, filter)
+	}
+
+	var filteredData DataMap
+
+	if len(filtersWithIndex) > 0 {
+		filteredData = db.filterDataByIndex(filtersWithIndex)
+	} else {
+		filteredData = db.dataMap
+	}
+
+	println(" indexing filters count %v ", len(filtersWithIndex))
+	println(" Non-indexing filters count %v ", len(filtersWithoutIndex))
+	println(" Scanning %v documents", len(filteredData))
+
+	for id := range filteredData {
 		isMatch := true
-		for _, filter := range filters {
+		eachData := db.dataMap[id]
+		for _, filter := range filtersWithoutIndex {
 			if value, ok := eachData.(DocumentInput)[filter["key"].(string)]; ok {
 				if value != filter["value"].(string) {
 					isMatch = false
@@ -111,9 +140,18 @@ func (db *Collection) FilterByIndexKey(request []GenericKeyValue) interface{} {
 
 	var results = make([]interface{}, 0)
 
-	isNotStarted := false
+	resultIds := db.filterDataByIndex(request)
 
-	resultIds := make(map[string]bool)
+	for eachId := range resultIds {
+		results = append(results, db.dataMap[eachId])
+	}
+
+	return results
+}
+
+func (db *Collection) filterDataByIndex(request []GenericKeyValue) DataMap {
+	isNotStarted := false
+	resultIds := make(DataMap)
 
 outerLoop:
 	for _, eachIndexMap := range request {
@@ -125,9 +163,9 @@ outerLoop:
 					}
 					isNotStarted = true
 				} else {
-					tempIds := make(map[string]bool)
+					tempIds := make(DataMap)
 					for _, eachId := range ids {
-						if resultIds[eachId] {
+						if _, exists := resultIds[eachId]; exists {
 							tempIds[eachId] = true
 						}
 					}
@@ -139,31 +177,26 @@ outerLoop:
 			}
 		}
 	}
-
-	for eachId := range resultIds {
-		results = append(results, db.data[eachId])
-	}
-
-	return results
+	return resultIds
 }
 
 func (db *Collection) Update(id string, updateInputData DocumentInput) interface{} {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if _, exists := db.data[id]; !exists {
+	if _, exists := db.dataMap[id]; !exists {
 		return fmt.Errorf("id '%s' not found", id)
 	}
 
-	db.updateIndex(db.data[id].(DocumentInput), updateInputData)
+	db.updateIndex(db.dataMap[id].(DocumentInput), updateInputData)
 
-	var existingData, _ = db.data[id].(DocumentInput)
+	var existingData, _ = db.dataMap[id].(DocumentInput)
 
 	for key, value := range updateInputData {
 		existingData[key] = value
 	}
 
-	db.data[id] = existingData
+	db.dataMap[id] = existingData
 
 	return existingData
 }
@@ -172,8 +205,8 @@ func (db *Collection) Delete(id string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if existingData, exists := db.data[id]; exists {
-		delete(db.data, id)
+	if existingData, exists := db.dataMap[id]; exists {
+		delete(db.dataMap, id)
 
 		db.deleteIndex(existingData.(DocumentInput))
 	} else {
@@ -187,8 +220,8 @@ func (db *Collection) GetIds() []string {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	keys := make([]string, 0, len(db.data))
-	for key := range db.data {
+	keys := make([]string, 0, len(db.dataMap))
+	for key := range db.dataMap {
 		keys = append(keys, key)
 	}
 	return keys
@@ -198,9 +231,9 @@ func (db *Collection) GetAllData() interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	details := make([]interface{}, 0, len(db.data))
+	details := make([]interface{}, 0, len(db.dataMap))
 
-	for _, value := range db.data {
+	for _, value := range db.dataMap {
 		details = append(details, value)
 	}
 
@@ -210,7 +243,7 @@ func (db *Collection) GetAllData() interface{} {
 func (db *Collection) Clear() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	db.data = make(Data)
+	db.dataMap = make(DataMap)
 	db.index = make(Index)
 }
 
