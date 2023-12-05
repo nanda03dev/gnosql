@@ -8,7 +8,7 @@ import (
 
 type GenericKeyValue map[string]interface{}
 
-type IndexValue map[string][]string
+type IndexValue map[string]map[string]string
 
 type Index map[string]IndexValue
 
@@ -156,16 +156,17 @@ func (db *Collection) filterDataByIndex(request []GenericKeyValue) DataMap {
 outerLoop:
 	for _, eachIndexMap := range request {
 		if indexMap, exists := db.index[eachIndexMap["key"].(string)]; exists {
-			if ids, exists := indexMap[eachIndexMap["value"].(string)]; exists {
+			if idsMap, exists := indexMap[eachIndexMap["value"].(string)]; exists {
 				if !isNotStarted {
-					for _, eachId := range ids {
+					for eachId := range idsMap {
 						resultIds[eachId] = true
 					}
 					isNotStarted = true
 				} else {
 					tempIds := make(DataMap)
-					for _, eachId := range ids {
-						if _, exists := resultIds[eachId]; exists {
+
+					for eachId := range resultIds {
+						if _, exists := idsMap[eachId]; exists {
 							tempIds[eachId] = true
 						}
 					}
@@ -293,20 +294,21 @@ func (db *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid
 
 	if uniqueUuid != "" {
 		if _, exists := db.index[indexKey][indexValue]; !exists {
-			db.index[indexKey][indexValue] = make([]string, 0, 100000)
+			db.index[indexKey][indexValue] = make(map[string]string)
+			// index[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
 		}
 		if isDelete {
-			// delete id from array
-			var updatedIndexValues = utils.DeleteElement(db.index[indexKey][indexValue], uniqueUuid)
-			if len(updatedIndexValues) > 0 {
-				db.index[indexKey][indexValue] = updatedIndexValues
-			} else {
+			// delete id from map ex {name:{nanda:{id1:id1, id2:id2 }}}, delete id1 from this map
+
+			delete(db.index[indexKey][indexValue], uniqueUuid)
+
+			if len(db.index[indexKey][indexValue]) < 1 {
 				delete(db.index[indexKey], indexValue)
 			}
 			return
 		}
 
-		db.index[indexKey][indexValue] = append(db.index[indexKey][indexValue], uniqueUuid)
+		db.index[indexKey][indexValue][uniqueUuid] = "Ok"
 		// index[name][kumar] = append([ids1,ids2], uniqueUuid)
 	}
 }
