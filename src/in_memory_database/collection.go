@@ -19,12 +19,12 @@ type Document map[string]interface{}
 type DocumentInput map[string]interface{}
 
 type Collection struct {
-	collectionName string
-	deleted        bool
-	index          Index    // index map Ex: {"city" :{ chennai: [id1, ids2]}}
-	indexKeys      []string // index keys ["city"]
+	CollectionName string   `json:"CollectionName"`
+	IsDeleted      bool     `json:"IsDeleted"`
+	Index          Index    `json:"Index"`     // Index map Ex: {"city" :{ chennai: [id1, ids2]}}
+	IndexKeys      []string `json:"IndexKeys"` // Index keys ["city"]
 	mu             sync.RWMutex
-	dataMap        DataMap
+	DataMap        DataMap `json:"DataMap"`
 }
 
 type CollectionInput struct {
@@ -39,12 +39,12 @@ func CreateCollections(collectionsInput []CollectionInput) CollectionOutput {
 
 	for _, collectionInput := range collectionsInput {
 		collectionInstance := &Collection{
-			collectionName: collectionInput.CollectionName,
-			indexKeys:      collectionInput.IndexKeys,
-			dataMap:        make(DataMap),
-			index:          make(Index),
+			CollectionName: collectionInput.CollectionName,
+			IndexKeys:      collectionInput.IndexKeys,
+			DataMap:        make(DataMap),
+			Index:          make(Index),
 			mu:             sync.RWMutex{},
-			deleted:        false,
+			IsDeleted:      false,
 		}
 		collectionInstances[collectionInput.CollectionName] = collectionInstance
 
@@ -53,12 +53,27 @@ func CreateCollections(collectionsInput []CollectionInput) CollectionOutput {
 	return collectionInstances
 }
 
-func (db *Collection) GetCollectionName() string {
-	return db.collectionName
+func LoadCollections(collections []*Collection) []*Collection {
+	var collectionInstances = make([]*Collection, 0)
+
+	for _, collection := range collections {
+		collectionInstance := &Collection{
+			CollectionName: collection.CollectionName,
+			IndexKeys:      collection.IndexKeys,
+			DataMap:        collection.DataMap,
+			Index:          collection.Index,
+			mu:             sync.RWMutex{},
+			IsDeleted:      collection.IsDeleted,
+		}
+
+		collectionInstances = append(collectionInstances, collectionInstance)
+	}
+
+	return collectionInstances
 }
 
-func (db *Collection) IsDeleted() bool {
-	return db.deleted
+func (db *Collection) GetCollectionName() string {
+	return db.CollectionName
 }
 
 func (db *Collection) Create(value DocumentInput) interface{} {
@@ -69,7 +84,7 @@ func (db *Collection) Create(value DocumentInput) interface{} {
 
 	value["id"] = uniqueUuid
 	value["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
-	db.dataMap[uniqueUuid] = value
+	db.DataMap[uniqueUuid] = value
 
 	db.createIndex(value)
 
@@ -79,7 +94,7 @@ func (db *Collection) Create(value DocumentInput) interface{} {
 func (db *Collection) Read(id string) interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
-	return db.dataMap[id]
+	return db.DataMap[id]
 }
 
 func (db *Collection) Filter(filters []GenericKeyValue) interface{} {
@@ -93,7 +108,7 @@ func (db *Collection) Filter(filters []GenericKeyValue) interface{} {
 
 outerLoop:
 	for _, filter := range filters {
-		for _, indexKey := range db.indexKeys {
+		for _, indexKey := range db.IndexKeys {
 			if indexKey == filter["key"] {
 				filtersWithIndex = append(filtersWithIndex, filter)
 				continue outerLoop
@@ -107,7 +122,7 @@ outerLoop:
 	if len(filtersWithIndex) > 0 {
 		filteredData = db.filterDataByIndex(filtersWithIndex)
 	} else {
-		filteredData = db.dataMap
+		filteredData = db.DataMap
 	}
 
 	println(" indexing filters count %v ", len(filtersWithIndex))
@@ -116,7 +131,7 @@ outerLoop:
 
 	for id := range filteredData {
 		isMatch := true
-		eachData := db.dataMap[id]
+		eachData := db.DataMap[id]
 		for _, filter := range filtersWithoutIndex {
 			if value, ok := eachData.(DocumentInput)[filter["key"].(string)]; ok {
 				if value != filter["value"].(string) {
@@ -143,7 +158,7 @@ func (db *Collection) FilterByIndexKey(request []GenericKeyValue) interface{} {
 	resultIds := db.filterDataByIndex(request)
 
 	for eachId := range resultIds {
-		results = append(results, db.dataMap[eachId])
+		results = append(results, db.DataMap[eachId])
 	}
 
 	return results
@@ -155,7 +170,7 @@ func (db *Collection) filterDataByIndex(request []GenericKeyValue) DataMap {
 
 outerLoop:
 	for _, eachIndexMap := range request {
-		if indexMap, exists := db.index[eachIndexMap["key"].(string)]; exists {
+		if indexMap, exists := db.Index[eachIndexMap["key"].(string)]; exists {
 			if idsMap, exists := indexMap[eachIndexMap["value"].(string)]; exists {
 				if !isNotStarted {
 					for eachId := range idsMap {
@@ -185,19 +200,19 @@ func (db *Collection) Update(id string, updateInputData DocumentInput) interface
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if _, exists := db.dataMap[id]; !exists {
+	if _, exists := db.DataMap[id]; !exists {
 		return fmt.Errorf("id '%s' not found", id)
 	}
 
-	db.updateIndex(db.dataMap[id].(DocumentInput), updateInputData)
+	db.updateIndex(db.DataMap[id].(DocumentInput), updateInputData)
 
-	var existingData, _ = db.dataMap[id].(DocumentInput)
+	var existingData, _ = db.DataMap[id].(DocumentInput)
 
 	for key, value := range updateInputData {
 		existingData[key] = value
 	}
 
-	db.dataMap[id] = existingData
+	db.DataMap[id] = existingData
 
 	return existingData
 }
@@ -206,8 +221,8 @@ func (db *Collection) Delete(id string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	if existingData, exists := db.dataMap[id]; exists {
-		delete(db.dataMap, id)
+	if existingData, exists := db.DataMap[id]; exists {
+		delete(db.DataMap, id)
 
 		db.deleteIndex(existingData.(DocumentInput))
 	} else {
@@ -221,8 +236,8 @@ func (db *Collection) GetIds() []string {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	keys := make([]string, 0, len(db.dataMap))
-	for key := range db.dataMap {
+	keys := make([]string, 0, len(db.DataMap))
+	for key := range db.DataMap {
 		keys = append(keys, key)
 	}
 	return keys
@@ -232,9 +247,9 @@ func (db *Collection) GetAllData() interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	details := make([]interface{}, 0, len(db.dataMap))
+	details := make([]interface{}, 0, len(db.DataMap))
 
-	for _, value := range db.dataMap {
+	for _, value := range db.DataMap {
 		details = append(details, value)
 	}
 
@@ -244,19 +259,19 @@ func (db *Collection) GetAllData() interface{} {
 func (db *Collection) Clear() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	db.dataMap = make(DataMap)
-	db.index = make(Index)
+	db.DataMap = make(DataMap)
+	db.Index = make(Index)
 }
 
 func (db *Collection) GetIndexData() interface{} {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	return db.index
+	return db.Index
 }
 
 func (db *Collection) createIndex(body DocumentInput) {
-	for _, eachIndex := range db.indexKeys {
+	for _, eachIndex := range db.IndexKeys {
 		if indexName, ok := body[eachIndex]; ok {
 			if id, ok := body["id"]; ok {
 				db.changeIndex(eachIndex, indexName.(string), id.(string), false)
@@ -266,7 +281,7 @@ func (db *Collection) createIndex(body DocumentInput) {
 }
 
 func (db *Collection) updateIndex(oldData, updatedData DocumentInput) {
-	for _, eachIndex := range db.indexKeys {
+	for _, eachIndex := range db.IndexKeys {
 		if oldIndexValue, ok := oldData[eachIndex]; ok {
 			if newIndexValue, ok := updatedData[eachIndex]; ok {
 				var id string = oldData["id"].(string)
@@ -278,7 +293,7 @@ func (db *Collection) updateIndex(oldData, updatedData DocumentInput) {
 	}
 }
 func (db *Collection) deleteIndex(body DocumentInput) {
-	for _, eachIndex := range db.indexKeys {
+	for _, eachIndex := range db.IndexKeys {
 		if indexName, ok := body[eachIndex]; ok {
 			if id, ok := body["id"]; ok {
 				db.changeIndex(eachIndex, indexName.(string), id.(string), true)
@@ -288,27 +303,27 @@ func (db *Collection) deleteIndex(body DocumentInput) {
 }
 
 func (db *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, isDelete bool) {
-	if _, exists := db.index[indexKey]; !exists {
-		db.index[indexKey] = make(IndexValue)
+	if _, exists := db.Index[indexKey]; !exists {
+		db.Index[indexKey] = make(IndexValue)
 	}
 
 	if uniqueUuid != "" {
-		if _, exists := db.index[indexKey][indexValue]; !exists {
-			db.index[indexKey][indexValue] = make(map[string]string)
-			// index[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
+		if _, exists := db.Index[indexKey][indexValue]; !exists {
+			db.Index[indexKey][indexValue] = make(map[string]string)
+			// Index[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
 		}
 		if isDelete {
 			// delete id from map ex {name:{nanda:{id1:id1, id2:id2 }}}, delete id1 from this map
 
-			delete(db.index[indexKey][indexValue], uniqueUuid)
+			delete(db.Index[indexKey][indexValue], uniqueUuid)
 
-			if len(db.index[indexKey][indexValue]) < 1 {
-				delete(db.index[indexKey], indexValue)
+			if len(db.Index[indexKey][indexValue]) < 1 {
+				delete(db.Index[indexKey], indexValue)
 			}
 			return
 		}
 
-		db.index[indexKey][indexValue][uniqueUuid] = "Ok"
-		// index[name][kumar] = append([ids1,ids2], uniqueUuid)
+		db.Index[indexKey][indexValue][uniqueUuid] = "Ok"
+		// Index[name][kumar] = append([ids1,ids2], uniqueUuid)
 	}
 }

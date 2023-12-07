@@ -1,26 +1,36 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/router"
 	"gnosql/src/seed"
+	"gnosql/src/utils"
 	"os"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
+
 	ginRouter := gin.Default()
 
 	port := os.Getenv("PORT")
+
 	if port == "" {
 		port = "8080"
 	}
 
-	db := in_memory_database.CreateDatabase()
+	utils.CreateDatabaseFolder()
 
-	seed.SeedData(ginRouter, db)
+	var gnoSQL *in_memory_database.GnoSQL = in_memory_database.CreateGnoSQL()
 
-	router.GenerateCollectionRoutes(ginRouter, db)
+	router.LoadGnoSQLAndRoutes(ginRouter, gnoSQL)
+
+	router.GenerateDatabaseRoutes(ginRouter, gnoSQL)
+
+	seed.SeedData(ginRouter, gnoSQL)
 
 	ginRouter.Run(":" + port)
+
+	defer gnoSQL.WriteAllDatabases()
 }

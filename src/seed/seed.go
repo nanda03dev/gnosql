@@ -9,7 +9,11 @@ import (
 	"strconv"
 )
 
-func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
+func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	db := gnoSQL.CreateDatabase("OMS")
+
+	router.GenerateCollectionRoutes(ginRouter, db)
+
 	UserCollection := in_memory_database.CollectionInput{
 		CollectionName: "users",
 		IndexKeys:      []string{"city", "pincode"},
@@ -24,7 +28,7 @@ func SeedData(ginRouter *gin.Engine, db *in_memory_database.Database) {
 
 	addedCollectionInstance := db.AddCollections(collections)
 
-	router.GenerateEntityRoutes(ginRouter, addedCollectionInstance)
+	router.GenerateEntityRoutes(ginRouter, db, addedCollectionInstance)
 
 	type City map[string]interface{}
 	type Pincode map[string]int
