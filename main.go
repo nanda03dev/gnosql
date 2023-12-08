@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	ginRouter := gin.Default()
 
 	port := os.Getenv("PORT")

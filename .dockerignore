@@ -1,0 +1,5 @@
+*.gnosql_sample.postman_collection.json
+*.gin-bin
+*.gin-bin
+*.dump-file
+*.git

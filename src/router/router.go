@@ -28,8 +28,14 @@ func GenerateDatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQ
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		databaseName := value["databaseName"].(string)
 
-		db := gnoSQL.CreateDatabase(value["databaseName"].(string))
+		if dbExists := gnoSQL.GetDatabase(databaseName); dbExists != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Database already exists"})
+			return
+		}
+
+		db := gnoSQL.CreateDatabase(databaseName)
 
 		GenerateCollectionRoutes(router, db)
 
@@ -48,13 +54,13 @@ func GenerateDatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQ
 		db := gnoSQL.GetDatabase(value["databaseName"].(string))
 
 		if db == nil {
-			c.JSON(http.StatusCreated, gin.H{"data": "Unexpected error while delete database"})
+			c.JSON(http.StatusBadRequest, gin.H{"data": "Unexpected error while delete database"})
 			return
 		}
 
 		gnoSQL.DeleteDatabase(db)
 
-		c.JSON(http.StatusCreated, gin.H{"data": "database created successfully"})
+		c.JSON(http.StatusOK, gin.H{"data": "database deleted successfully"})
 
 	})
 
@@ -118,7 +124,7 @@ func GenerateCollectionRoutes(router *gin.Engine, db *in_memory_database.Databas
 
 		}
 
-		addedCollectionInstance := db.AddCollections(collections)
+		addedCollectionInstance := db.CreateCollections(collections)
 
 		GenerateEntityRoutes(router, db, addedCollectionInstance)
 
@@ -154,11 +160,11 @@ func GenerateCollectionRoutes(router *gin.Engine, db *in_memory_database.Databas
 		}
 
 		// Fetch all data from the database
-		allCollections := db.GetCollections()
+		allCollections := db.Collections
 		collections := make([]string, 0)
 
 		for _, collection := range allCollections {
-			collections = append(collections, collection.GetCollectionName())
+			collections = append(collections, collection.CollectionName)
 		}
 		// Serialize data to JSON
 		responseData, _ := json.Marshal(collections)

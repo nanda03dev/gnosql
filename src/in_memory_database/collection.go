@@ -1,8 +1,10 @@
 package in_memory_database
 
 import (
+	"cmp"
 	"fmt"
 	"gnosql/src/utils"
+	"slices"
 	"sync"
 )
 
@@ -12,17 +14,15 @@ type IndexValue map[string]map[string]string
 
 type Index map[string]IndexValue
 
-type DataMap map[string]interface{}
-
 type Document map[string]interface{}
 
-type DocumentInput map[string]interface{}
+type DataMap map[string]Document
 
 type Collection struct {
 	CollectionName string   `json:"CollectionName"`
 	IsDeleted      bool     `json:"IsDeleted"`
 	Index          Index    `json:"Index"`     // Index map Ex: {"city" :{ chennai: [id1, ids2]}}
-	IndexKeys      []string `json:"IndexKeys"` // Index keys ["city"]
+	IndexKeys      []string `json:"IndexKeys"` // Index keys ["city", "pincode"]
 	mu             sync.RWMutex
 	DataMap        DataMap `json:"DataMap"`
 }
@@ -32,25 +32,15 @@ type CollectionInput struct {
 	IndexKeys      []string
 }
 
-type CollectionOutput map[string]*Collection
-
-func CreateCollections(collectionsInput []CollectionInput) CollectionOutput {
-	collectionInstances := make(CollectionOutput)
-
-	for _, collectionInput := range collectionsInput {
-		collectionInstance := &Collection{
-			CollectionName: collectionInput.CollectionName,
-			IndexKeys:      collectionInput.IndexKeys,
-			DataMap:        make(DataMap),
-			Index:          make(Index),
-			mu:             sync.RWMutex{},
-			IsDeleted:      false,
-		}
-		collectionInstances[collectionInput.CollectionName] = collectionInstance
-
+func CreateCollection(collectionInput CollectionInput) *Collection {
+	return &Collection{
+		CollectionName: collectionInput.CollectionName,
+		IndexKeys:      collectionInput.IndexKeys,
+		DataMap:        make(DataMap),
+		Index:          make(Index),
+		mu:             sync.RWMutex{},
+		IsDeleted:      false,
 	}
-
-	return collectionInstances
 }
 
 func LoadCollections(collections []*Collection) []*Collection {
@@ -72,11 +62,7 @@ func LoadCollections(collections []*Collection) []*Collection {
 	return collectionInstances
 }
 
-func (db *Collection) GetCollectionName() string {
-	return db.CollectionName
-}
-
-func (db *Collection) Create(value DocumentInput) interface{} {
+func (db *Collection) Create(value Document) interface{} {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -125,23 +111,24 @@ outerLoop:
 		filteredData = db.DataMap
 	}
 
-	println(" indexing filters count %v ", len(filtersWithIndex))
-	println(" Non-indexing filters count %v ", len(filtersWithoutIndex))
-	println(" Scanning %v documents", len(filteredData))
+	fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
+	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
+	fmt.Printf("\n Scanning %d documents \n", len(filteredData))
 
 	for id := range filteredData {
-		isMatch := true
-		eachData := db.DataMap[id]
+		var isMatch bool = true
+		document := db.DataMap[id]
 		for _, filter := range filtersWithoutIndex {
-			if value, ok := eachData.(DocumentInput)[filter["key"].(string)]; ok {
+			if value, ok := document[filter["key"].(string)]; ok {
 				if value != filter["value"].(string) {
 					isMatch = false
 					break
 				}
 			}
 		}
+
 		if isMatch {
-			results = append(results, eachData)
+			results = append(results, document)
 		}
 
 	}
@@ -167,27 +154,57 @@ func (db *Collection) FilterByIndexKey(request []GenericKeyValue) interface{} {
 func (db *Collection) filterDataByIndex(request []GenericKeyValue) DataMap {
 	isNotStarted := false
 	resultIds := make(DataMap)
+	filteredIndexMap := make(Index)
+
+	for _, indexMap := range request {
+		for index, indexIds := range db.Index {
+			if indexMap["key"].(string) == index {
+				filteredIndexMap[index] = indexIds
+			}
+		}
+	}
+
+	slices.SortFunc(request,
+		func(a, b GenericKeyValue) int {
+			keyToSearchA := a["key"].(string)
+			valueToSearchA := a["value"].(string)
+
+			keyToSearchB := b["key"].(string)
+			valueToSearchB := b["value"].(string)
+
+			indexIdsLenA := len(filteredIndexMap[keyToSearchA][valueToSearchA])
+			//20 := len(filteredIndexMap[city][chennai]) chennai - 1000 - users
+			indexIdsLenB := len(filteredIndexMap[keyToSearchB][valueToSearchB])
+			//10 := len(filteredIndexMap[pincode][60100]) 600100 - 20 - users
+			return cmp.Compare(indexIdsLenA, indexIdsLenB)
+		})
 
 outerLoop:
 	for _, eachIndexMap := range request {
-		if indexMap, exists := db.Index[eachIndexMap["key"].(string)]; exists {
-			if idsMap, exists := indexMap[eachIndexMap["value"].(string)]; exists {
+
+		keyToSearch := eachIndexMap["key"].(string)
+		valueToSearch := eachIndexMap["value"].(string)
+
+		if indexMap, exists := filteredIndexMap[keyToSearch]; exists {
+			if idsMap, exists := indexMap[valueToSearch]; exists {
+
 				if !isNotStarted {
 					for eachId := range idsMap {
-						resultIds[eachId] = true
+						resultIds[eachId] = Document{}
 					}
 					isNotStarted = true
 				} else {
 					tempIds := make(DataMap)
-
 					for eachId := range resultIds {
 						if _, exists := idsMap[eachId]; exists {
-							tempIds[eachId] = true
+							tempIds[eachId] = Document{}
 						}
 					}
+
 					if len(tempIds) == 0 {
 						break outerLoop
 					}
+
 					resultIds = tempIds
 				}
 			}
@@ -196,7 +213,7 @@ outerLoop:
 	return resultIds
 }
 
-func (db *Collection) Update(id string, updateInputData DocumentInput) interface{} {
+func (db *Collection) Update(id string, updateInputData Document) interface{} {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -204,9 +221,9 @@ func (db *Collection) Update(id string, updateInputData DocumentInput) interface
 		return fmt.Errorf("id '%s' not found", id)
 	}
 
-	db.updateIndex(db.DataMap[id].(DocumentInput), updateInputData)
+	db.updateIndex(db.DataMap[id], updateInputData)
 
-	var existingData, _ = db.DataMap[id].(DocumentInput)
+	var existingData, _ = db.DataMap[id]
 
 	for key, value := range updateInputData {
 		existingData[key] = value
@@ -224,7 +241,7 @@ func (db *Collection) Delete(id string) error {
 	if existingData, exists := db.DataMap[id]; exists {
 		delete(db.DataMap, id)
 
-		db.deleteIndex(existingData.(DocumentInput))
+		db.deleteIndex(existingData)
 	} else {
 		return fmt.Errorf("id '%s' not found", id)
 	}
@@ -270,7 +287,7 @@ func (db *Collection) GetIndexData() interface{} {
 	return db.Index
 }
 
-func (db *Collection) createIndex(body DocumentInput) {
+func (db *Collection) createIndex(body Document) {
 	for _, eachIndex := range db.IndexKeys {
 		if indexName, ok := body[eachIndex]; ok {
 			if id, ok := body["id"]; ok {
@@ -280,7 +297,7 @@ func (db *Collection) createIndex(body DocumentInput) {
 	}
 }
 
-func (db *Collection) updateIndex(oldData, updatedData DocumentInput) {
+func (db *Collection) updateIndex(oldData, updatedData Document) {
 	for _, eachIndex := range db.IndexKeys {
 		if oldIndexValue, ok := oldData[eachIndex]; ok {
 			if newIndexValue, ok := updatedData[eachIndex]; ok {
@@ -292,7 +309,7 @@ func (db *Collection) updateIndex(oldData, updatedData DocumentInput) {
 		}
 	}
 }
-func (db *Collection) deleteIndex(body DocumentInput) {
+func (db *Collection) deleteIndex(body Document) {
 	for _, eachIndex := range db.IndexKeys {
 		if indexName, ok := body[eachIndex]; ok {
 			if id, ok := body["id"]; ok {

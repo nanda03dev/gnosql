@@ -1,0 +1,812 @@
+{
+	"info": {
+		"_postman_id": "8cd25882-084e-4471-88cc-0e0d0c19c028",
+		"name": "Go",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2286173"
+	},
+	"item": [
+		{
+			"name": "GnoSQL",
+			"item": [
+				{
+					"name": "add collections",
+					"item": [
+						{
+							"name": "add-collections",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"collectionName\": \"users\",\n        \"indexKeys\": [\"username\"]\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/add-collections",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"add-collections"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add-collections 2",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"collectionName\": \"orders\",\n        \"indexKeys\": [\"itemName\"]\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/add-collections",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"add-collections"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "users",
+					"item": [
+						{
+							"name": "add-collections",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"collectionName\": \"users\",\n        \"indexKeys\": [\"city\",\"pincode\"]\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/add-collections",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"add-collections"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"load collection variable\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.collectionVariables.set(\"user_id\", jsonData.data.id);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"userName\": \"Hema\",\n    \"city\": \"Chennai\",\n    \"pincode\": \"600100\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "read",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/{{user_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"{{user_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"userName\": \"kumar\",\n    \"city\":\"Banglore\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/{{user_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"{{user_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get index",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/index-data",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"index-data"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "full-db",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Body matches string\", function () {",
+											"    console.log(pm.response.json())",
+											"    });"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/all-data",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"all-data"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/{{user_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"{{user_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "filter",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"key\": \"userName\",\n        \"value\": \"user23\"\n    },\n    {\n        \"key\": \"pincode\",\n        \"value\": \"110035\"\n    },\n    {\n        \"key\": \"city\",\n        \"value\": \"Noida\"\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/filter",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"filter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "filter by index",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"key\": \"city\",\n        \"value\": \"Chennai\"\n    },\n    {\n        \"key\": \"pincode\",\n        \"value\": \"600000\"\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/filterbyindex",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										"filterbyindex"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "orders",
+					"item": [
+						{
+							"name": "add-collections orders",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"collectionName\": \"orders\",\n        \"indexKeys\": [\"itemName\"]\n    }\n]",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/add-collections",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"add-collections"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create user",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"load collection variable\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.collectionVariables.set(\"user_id\", jsonData.data.id);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"userName\": \"kumar\",\n    \"pwd\":\"hema03\",\n    \"city\": \"Hyderabad\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/users/",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"load collection variable\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.collectionVariables.set(\"order_id\", jsonData.data.id);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"userId\": \"{{user_id}}\",\n    \"category\" : \"Food\",\n    \"items\":[\n        {\n        \"name\": \"briyani\",\n        \"price\": \"230\"\n        },\n        {\n        \"name\": \"chicken 65\",\n        \"price\": \"190\"\n        }\n    ]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "read",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Your test name\", function () {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.data.id).to.equal(pm.collectionVariables.get(\"order_id\"));",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/{{order_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"{{order_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"itemName\": \"pencil\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/{{order_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"{{order_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get index",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/index-data",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"index-data"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "full-db",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Body matches string\", function () {",
+											"    console.log(pm.response.json())",
+											"    });"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/all-data",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"all-data"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/{{order_id}}",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"{{order_id}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "filer",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"key\":\"category\",\n    \"value\":\"Food\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/filter",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"filter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "filter by index",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"key\":\"category\",\n    \"value\":\"Food\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{local-server}}/{{database-name}}/orders/filterbyindex",
+									"host": [
+										"{{local-server}}"
+									],
+									"path": [
+										"{{database-name}}",
+										"orders",
+										"filterbyindex"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "get-all-collections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{local-server}}/{{database-name}}/get-all-collections",
+							"host": [
+								"{{local-server}}"
+							],
+							"path": [
+								"{{database-name}}",
+								"get-all-collections"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete-collections",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "    {\n        \"collections\": [\"users\"]\n    }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local-server}}/{{database-name}}/delete-collections",
+							"host": [
+								"{{local-server}}"
+							],
+							"path": [
+								"{{database-name}}",
+								"delete-collections"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reload",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:3000",
+							"host": [
+								"localhost"
+							],
+							"port": "3000"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "add-database",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"databaseName\": \"{{database-name}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local-server}}/add-database",
+							"host": [
+								"{{local-server}}"
+							],
+							"path": [
+								"add-database"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "all databases",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{local-server}}/get-all-databases",
+							"host": [
+								"{{local-server}}"
+							],
+							"path": [
+								"get-all-databases"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete-database",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"databaseName\": \"{{database-name}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{local-server}}/delete-database",
+							"host": [
+								"{{local-server}}"
+							],
+							"path": [
+								"delete-database"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "id",
+			"value": ""
+		},
+		{
+			"key": "user_id",
+			"value": ""
+		},
+		{
+			"key": "order_id",
+			"value": ""
+		}
+	]
+}

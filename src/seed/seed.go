@@ -2,15 +2,23 @@ package seed
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/router"
 	"math/rand"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	db := gnoSQL.CreateDatabase("OMS")
+	testDBName := "test"
+
+	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
+		fmt.Printf("\nSeed %s database already exists\n", testDBName)
+		return
+	}
+
+	db := gnoSQL.CreateDatabase(testDBName)
 
 	router.GenerateCollectionRoutes(ginRouter, db)
 
@@ -26,7 +34,7 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 	collections := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
 
-	addedCollectionInstance := db.AddCollections(collections)
+	addedCollectionInstance := db.CreateCollections(collections)
 
 	router.GenerateEntityRoutes(ginRouter, db, addedCollectionInstance)
 
@@ -61,8 +69,8 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	category := []string{"Food", "Grocery", "Decoration"}
 
 	// Initialize the array with unique usernames and passwords
-	for i := 0; i < 10000; i++ {
-		user := make(in_memory_database.DocumentInput)
+	for i := 0; i < 100000; i++ {
+		user := make(in_memory_database.Document)
 		user["userName"] = fmt.Sprintf("user%d", i+1)
 		user["pwd"] = fmt.Sprintf("password%d", i+1)
 
@@ -74,14 +82,14 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 		user["pincode"] = strconv.Itoa(pincode)
 
-		userInstance, _ := db.GetCollection(UserCollection.CollectionName)
-		userResult := userInstance.Create(user).(in_memory_database.DocumentInput)
+		userInstance := db.GetCollection(UserCollection.CollectionName)
+		userResult := userInstance.Create(user).(in_memory_database.Document)
 
 		userId := userResult["id"]
 
-		orderInstance, _ := db.GetCollection(OrderCollection.CollectionName)
+		orderInstance := db.GetCollection(OrderCollection.CollectionName)
 		for i := 0; i < 2; i++ {
-			order := make(in_memory_database.DocumentInput)
+			order := make(in_memory_database.Document)
 			order["userId"] = userId
 			order["category"] = category[rand.Intn(len(category))]
 			orderInstance.Create(order)

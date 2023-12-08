@@ -47,3 +47,15 @@ for indexName, indexMap := range db.index {
 ]
 
 
+
+
+//  filteredIndexMap =  {
+// 	city : {chennai: {100-ids}, noida: {200-ids}, ... 3cities}
+// 	pincode : {600100: {10-ids}, 600110: {5-ids}, 100110: {40-ids} , .... 100 picodes}
+//  }
+
+// keyToSearchA = city
+// valueToSearchA = chennai
+
+// keyToSearchB = picode
+// valueToSearchB = 600100

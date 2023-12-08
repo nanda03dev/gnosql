@@ -109,10 +109,6 @@ func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
 	return nil
 }
 
-func (gnoSQL *GnoSQL) GetDatabases() []*Database {
-	return gnoSQL.Databases
-}
-
 func (gnoSQL *GnoSQL) WriteAllDatabases() {
 	for _, database := range gnoSQL.Databases {
 		database.SaveToFile()

@@ -18,21 +18,18 @@ type Database struct {
 	IsDeleted            bool          `json:"IsDeleted"`
 }
 
-func (db *Database) AddCollections(newCollections []CollectionInput) []*Collection {
-	var oldCollections []*Collection = db.Collections
+func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Collection {
+	var collections []*Collection = make([]*Collection, 0)
 
-	var createdCollections CollectionOutput = CreateCollections(newCollections)
-
-	var newCollectionInstances []*Collection
-
-	for _, collection := range createdCollections {
-		newCollectionInstances = append(newCollectionInstances, collection)
-		oldCollections = append(oldCollections, collection)
+	for _, collectionInput := range collectionsInput {
+		if IsCollectionExists := db.GetCollection(collectionInput.CollectionName); IsCollectionExists == nil {
+			collection := CreateCollection(collectionInput)
+			db.Collections = append(db.Collections, collection)
+			collections = append(collections, collection)
+		}
 	}
 
-	db.Collections = oldCollections
-
-	return newCollectionInstances
+	return collections
 }
 
 func (db *Database) DeleteCollections(collectionNamesToDelete []string) *Database {
@@ -40,7 +37,7 @@ func (db *Database) DeleteCollections(collectionNamesToDelete []string) *Databas
 
 	for _, collectionNameToDelete := range collectionNamesToDelete {
 		for collectionIndex, collection := range Collections {
-			if collectionNameToDelete == collection.GetCollectionName() {
+			if collectionNameToDelete == collection.CollectionName {
 				collection.Clear()
 
 				collection.IsDeleted = true
@@ -55,17 +52,13 @@ func (db *Database) DeleteCollections(collectionNamesToDelete []string) *Databas
 	return db
 }
 
-func (db *Database) GetCollections() []*Collection {
-	return db.Collections
-}
-
-func (db *Database) GetCollection(collectionName string) (*Collection, error) {
-	for _, eachCollection := range db.Collections {
-		if eachCollection.GetCollectionName() == collectionName {
-			return eachCollection, nil
+func (db *Database) GetCollection(collectionName string) *Collection {
+	for _, collection := range db.Collections {
+		if collection.CollectionName == collectionName {
+			return collection
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func (db *Database) SaveToFile() error {
