@@ -12,7 +12,7 @@
 
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host      localhost:8080
+// @host      localhost:5454
 // @BasePath  /api
 
 package main
