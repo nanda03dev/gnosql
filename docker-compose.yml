@@ -9,9 +9,9 @@ services:
             dockerfile: Dockerfile
         ports:
             # <<local host port >>:<<container port>>
-            - 8080:8080
+            - 5454:5454
         volumes:
             - .:/app
         environment:
-            PORT: 8080
+            PORT: 5454
             GIN_MODE: release

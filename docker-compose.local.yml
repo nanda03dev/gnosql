@@ -9,7 +9,7 @@ services:
             dockerfile: Dockerfile.local
         ports:
             # <<local host port >>:<<container port>>
-            - 8080:3000
+            - 5454:3000
         volumes:
             - .:/app
         environment:
