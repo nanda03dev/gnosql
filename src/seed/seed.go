@@ -3,24 +3,21 @@ package seed
 import (
 	"fmt"
 	"gnosql/src/in_memory_database"
-	"gnosql/src/router"
 	"math/rand"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 	testDBName := "test"
 
 	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
 		fmt.Printf("\nSeed %s database already exists\n", testDBName)
-		return
+		return nil
 	}
 
 	db := gnoSQL.CreateDatabase(testDBName)
-
-	router.GenerateCollectionRoutes(ginRouter, db)
 
 	UserCollection := in_memory_database.CollectionInput{
 		CollectionName: "users",
@@ -34,9 +31,7 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 	collections := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
 
-	addedCollectionInstance := db.CreateCollections(collections)
-
-	router.GenerateEntityRoutes(ginRouter, db, addedCollectionInstance)
+	db.CreateCollections(collections)
 
 	type City map[string]interface{}
 	type Pincode map[string]int
@@ -96,5 +91,7 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		}
 
 	}
+
+	return db
 
 }

@@ -37,6 +37,30 @@ for indexName, indexMap := range db.index {
 
 
 [
+	// Read by index
+	router.POST(path+"/filterbyindex", func(c *gin.Context) {
+		if db.IsDeleted {
+			c.JSON(http.StatusBadRequest, gin.H{"message": db.DatabaseName + " database deleted"})
+			return
+		}
+
+		if collection.IsDeleted {
+			c.JSON(http.StatusBadRequest, gin.H{"message": collection.CollectionName + " collection deleted"})
+			return
+		}
+
+		var value []in_memory_database.GenericKeyValue
+
+		if err := c.BindJSON(&value); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result := collection.FilterByIndexKey(value)
+
+		c.JSON(http.StatusCreated, gin.H{"data": result})
+	})
+
     {
         "ids": [
             "698f7be6-7254-4716-8b59-0ae0a161e95c"
@@ -59,3 +83,4 @@ for indexName, indexMap := range db.index {
 
 // keyToSearchB = picode
 // valueToSearchB = 600100
+

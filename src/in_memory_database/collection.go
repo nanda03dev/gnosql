@@ -28,7 +28,10 @@ type Collection struct {
 }
 
 type CollectionInput struct {
+	// Example: collectionName
 	CollectionName string
+
+	// Example: indexKeys
 	IndexKeys      []string
 }
 

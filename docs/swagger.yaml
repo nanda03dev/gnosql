@@ -1,0 +1,401 @@
+basePath: /api/v1
+definitions:
+  in_memory_database.CollectionInput:
+    properties:
+      collectionName:
+        description: 'Example: collectionName'
+        type: string
+      indexKeys:
+        description: 'Example: indexKeys'
+        items:
+          type: string
+        type: array
+    type: object
+  in_memory_database.Document:
+    additionalProperties: true
+    type: object
+  in_memory_database.GenericKeyValue:
+    additionalProperties: true
+    type: object
+  in_memory_database.Index:
+    additionalProperties:
+      $ref: '#/definitions/in_memory_database.IndexValue'
+    type: object
+  in_memory_database.IndexValue:
+    additionalProperties:
+      additionalProperties:
+        type: string
+      type: object
+    type: object
+  router.DatabaseRequestInput:
+    properties:
+      databaseName:
+        description: 'Example: databaseName'
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: nanda23311@gmail.com
+    name: Nanda Kumar
+    url: https://twitter.com/nanda0311
+  description: No sql database in Go using Gin framework.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: GnoSQL Database
+  version: "1.0"
+paths:
+  /{databaseName}/{collectionName}/:
+    post:
+      description: To create new document
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      - description: Document
+        in: body
+        name: document
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.Document'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Document created successfully
+        "400":
+          description: Database/Collection deleted
+      summary: Create new document
+      tags:
+      - document
+  /{databaseName}/{collectionName}/{id}:
+    delete:
+      description: To delete document
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      - description: delete document by id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/in_memory_database.Document'
+        "400":
+          description: Database/Collection deleted
+      summary: Delete document
+      tags:
+      - document
+    get:
+      description: Read document by id.
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      - description: search document by id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/in_memory_database.Document'
+        "400":
+          description: Database/Collection deleted
+      summary: Read by id
+      tags:
+      - document
+    put:
+      description: To update document
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      - description: update document by id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Document
+        in: body
+        name: document
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.Document'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/in_memory_database.Document'
+        "400":
+          description: Database/Collection deleted
+      summary: Update document
+      tags:
+      - document
+  /{databaseName}/{collectionName}/all-data:
+    get:
+      description: Read all document
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/in_memory_database.Document'
+            type: array
+        "400":
+          description: Database/Collection deleted
+      summary: Read all document
+      tags:
+      - document
+  /{databaseName}/{collectionName}/filter:
+    post:
+      description: Filter document
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      - description: GenericKeyValue
+        in: body
+        name: document
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.GenericKeyValue'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/in_memory_database.Document'
+            type: array
+        "400":
+          description: Database/Collection deleted
+      summary: Filter document
+      tags:
+      - document
+  /{databaseName}/{collectionName}/stats:
+    get:
+      description: Collection stats
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/in_memory_database.Index'
+        "400":
+          description: Database/Collection deleted
+      summary: Collection stats
+      tags:
+      - collection
+  /{databaseName}/add-collection:
+    post:
+      description: To create new collection.
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: Collection
+        in: body
+        name: collection
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.CollectionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: collection created successfully
+        "400":
+          description: collection already exists
+      summary: Create new collection
+      tags:
+      - collection
+  /{databaseName}/delete-collection:
+    post:
+      description: To delete collection
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collection
+        in: body
+        name: collection
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: collection deleted successfully
+        "400":
+          description: Unexpected error while delete collection
+      summary: Delete collection
+      tags:
+      - collection
+  /{databaseName}/get-all-collection:
+    get:
+      description: To get all collections
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get all collections
+      tags:
+      - collection
+  /add-database:
+    post:
+      description: To create new database
+      parameters:
+      - description: Database
+        in: body
+        name: database
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: database created successfully
+        "400":
+          description: Database already exists
+      summary: Create new database
+      tags:
+      - database
+  /delete-database:
+    post:
+      description: To delete database
+      parameters:
+      - description: Database
+        in: body
+        name: database
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: database deleted successfully
+        "400":
+          description: Unexpected error while delete database
+      summary: Delete database
+      tags:
+      - database
+  /generate-seed-data:
+    get:
+      description: This will create generate seed database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: generate seed database
+      tags:
+      - generate-seed-data
+  /get-all-database:
+    get:
+      description: To get all database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get all database
+      tags:
+      - database
+swagger: "2.0"

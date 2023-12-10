@@ -1,0 +1,601 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "No sql database in Go using Gin framework.",
+        "title": "GnoSQL Database",
+        "contact": {
+            "name": "Nanda Kumar",
+            "url": "https://twitter.com/nanda0311",
+            "email": "nanda23311@gmail.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/add-database": {
+            "post": {
+                "description": "To create new database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Create new database",
+                "parameters": [
+                    {
+                        "description": "Database",
+                        "name": "database",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "database created successfully"
+                    },
+                    "400": {
+                        "description": "Database already exists"
+                    }
+                }
+            }
+        },
+        "/delete-database": {
+            "post": {
+                "description": "To delete database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Delete database",
+                "parameters": [
+                    {
+                        "description": "Database",
+                        "name": "database",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "database deleted successfully"
+                    },
+                    "400": {
+                        "description": "Unexpected error while delete database"
+                    }
+                }
+            }
+        },
+        "/generate-seed-data": {
+            "get": {
+                "description": "This will create generate seed database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "generate-seed-data"
+                ],
+                "summary": "generate seed database",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/get-all-database": {
+            "get": {
+                "description": "To get all database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Get all database",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{databaseName}/add-collection": {
+            "post": {
+                "description": "To create new collection.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collection"
+                ],
+                "summary": "Create new collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Collection",
+                        "name": "collection",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.CollectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "collection created successfully"
+                    },
+                    "400": {
+                        "description": "collection already exists"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/delete-collection": {
+            "post": {
+                "description": "To delete collection",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collection"
+                ],
+                "summary": "Delete collection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "collection",
+                        "name": "collection",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "collection deleted successfully"
+                    },
+                    "400": {
+                        "description": "Unexpected error while delete collection"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/get-all-collection": {
+            "get": {
+                "description": "To get all collections",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collection"
+                ],
+                "summary": "Get all collections",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{databaseName}/{collectionName}/": {
+            "post": {
+                "description": "To create new document",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Create new document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Document",
+                        "name": "document",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Document"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Document created successfully"
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/{collectionName}/all-data": {
+            "get": {
+                "description": "Read all document",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Read all document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/in_memory_database.Document"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/{collectionName}/filter": {
+            "post": {
+                "description": "Filter document",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Filter document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericKeyValue",
+                        "name": "document",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.GenericKeyValue"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/in_memory_database.Document"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/{collectionName}/stats": {
+            "get": {
+                "description": "Collection stats",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collection"
+                ],
+                "summary": "Collection stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Index"
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        },
+        "/{databaseName}/{collectionName}/{id}": {
+            "get": {
+                "description": "Read document by id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Read by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "search document by id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Document"
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            },
+            "put": {
+                "description": "To update document",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Update document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "update document by id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Document",
+                        "name": "document",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Document"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Document"
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            },
+            "delete": {
+                "description": "To delete document",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Delete document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "delete document by id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Document"
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "in_memory_database.CollectionInput": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "description": "Example: collectionName",
+                    "type": "string"
+                },
+                "indexKeys": {
+                    "description": "Example: indexKeys",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "in_memory_database.Document": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "in_memory_database.GenericKeyValue": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "in_memory_database.Index": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/in_memory_database.IndexValue"
+            }
+        },
+        "in_memory_database.IndexValue": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                }
+            }
+        },
+        "router.DatabaseRequestInput": {
+            "type": "object",
+            "properties": {
+                "databaseName": {
+                    "description": "Example: databaseName",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
