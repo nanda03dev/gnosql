@@ -19,9 +19,13 @@ import (
 func GenerateSeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	router.GET("/generate-seed-data", func(c *gin.Context) {
 		var database *in_memory_database.Database = seed.SeedData(router, gnoSQL)
+		if database == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"status": "Seed database and routes exists already"})
+			return
+		}
+
 		GenerateCollectionRoutes(router, database)
 		GenerateEntityRoutes(router, database)
-
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Seed database and routes created"})
 
 	})

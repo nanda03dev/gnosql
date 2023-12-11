@@ -50,6 +50,7 @@ func main() {
 	router.GenerateDatabaseRoutes(ginRouter, gnoSQL)
 
 	docs.SwaggerInfo.BasePath = "/"
+	docs.SwaggerInfo.Host = "localhost:5454"
 
 	// Swagger handler
 	ginRouter.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

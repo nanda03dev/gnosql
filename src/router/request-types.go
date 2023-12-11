@@ -5,9 +5,3 @@ type DatabaseRequestInput struct {
 	DatabaseName string
 }
 
-
-type CollectionsDeleteRequestInput struct {
-	// Example: collections
-	Collections string
-}
-
