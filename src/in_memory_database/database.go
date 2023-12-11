@@ -82,7 +82,7 @@ func (db *Database) SaveToFile() error {
 }
 
 func (db *Database) StartTimerToSaveFile() {
-	for range time.Tick(30 * time.Second) {
+	for range time.Tick(2 * time.Hour) {
 		go db.SaveToFile()
 	}
 }

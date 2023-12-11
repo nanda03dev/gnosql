@@ -96,8 +96,6 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /{databaseName}/add-collection [post]
 func CreateCollection(c *gin.Context, router *gin.Engine, db *in_memory_database.Database) {
 
-	println("db ", db)
-
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
 		return
@@ -115,13 +113,10 @@ func CreateCollection(c *gin.Context, router *gin.Engine, db *in_memory_database
 	for _, each := range value {
 		if collectionName, ok := each["collectionName"].(string); ok {
 
-			println("CollectionName ", collectionName)
 			var indexKeys = make([]string, 0)
 
 			for _, each := range each["indexKeys"].([]interface{}) {
-				println("each ", each)
 				indexKeys = append(indexKeys, each.(string))
-
 			}
 
 			collection := in_memory_database.CollectionInput{
@@ -179,8 +174,6 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Success      200 {array} string
 // @Router       /{databaseName}/get-all-collection [get]
 func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
-	println("in GetAllCollections db ", db)
-
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
 		return

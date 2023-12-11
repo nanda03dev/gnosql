@@ -34,37 +34,38 @@ func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	router.POST("/add-database", func(c *gin.Context) {
+	path := "/database"
+	router.POST(path+"/add", func(c *gin.Context) {
 		handler.CreateDatabase(c, router, gnoSQL)
 	})
 
-	router.POST("/delete-database", func(c *gin.Context) {
+	router.POST(path+"/delete", func(c *gin.Context) {
 		handler.DeleteDatabase(c, gnoSQL)
 	})
 
-	router.GET("/get-all-database", func(c *gin.Context) {
+	router.GET(path+"/get-all", func(c *gin.Context) {
 		handler.GetAllDatabases(c, gnoSQL)
 	})
 }
 
 func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
-	path := "/:DatabaseName"
+	path := "/collection/:DatabaseName"
 
-	router.POST(path+"/add-collections", func(c *gin.Context) {
+	router.POST(path+"/add", func(c *gin.Context) {
 		DatabaseName := c.Param("DatabaseName")
 		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 
 		handler.CreateCollection(c, router, db)
 	})
 
-	router.DELETE(path+"/delete-collections", func(c *gin.Context) {
+	router.DELETE(path+"/delete", func(c *gin.Context) {
 		DatabaseName := c.Param("DatabaseName")
 		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 		handler.DeleteCollection(c, db)
 	})
 
-	router.GET(path+"/get-all-collection", func(c *gin.Context) {
+	router.GET(path+"/get-all", func(c *gin.Context) {
 		DatabaseName := c.Param("DatabaseName")
 		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 		handler.GetAllCollections(c, db)
@@ -73,7 +74,7 @@ func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	path := "/:DatabaseName/:CollectionName"
+	path := "/document/:DatabaseName/:CollectionName"
 
 	// Create
 	router.POST(path, func(c *gin.Context) {

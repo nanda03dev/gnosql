@@ -66,7 +66,6 @@ func (gnoSQL *GnoSQL) DeleteDatabase(db *Database) bool {
 			databases = append(databases, database)
 		} else {
 			database.ClearDatabase()
-			println("in DeleteDatabase ", database.DatabaseName)
 		}
 	}
 
@@ -81,7 +80,6 @@ func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
 	fileNames, err := utils.ReadFileNamesInDirectory(utils.GNOSQLFULLPATH)
 
 	if err != nil {
-		println("Database loading, Error while reading files:", err)
 		return databases
 	}
 
@@ -103,6 +101,7 @@ func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
 
 func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
 	for _, database := range gnoSQL.Databases {
+		println("database.DatabaseName ", database.DatabaseName)
 		if database.DatabaseName == databaseName {
 			return database
 		}
