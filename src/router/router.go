@@ -46,6 +46,12 @@ func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	router.GET(path+"/get-all", func(c *gin.Context) {
 		handler.GetAllDatabases(c, gnoSQL)
 	})
+
+	router.GET(path+"/load-to-disk", func(c *gin.Context) {
+		gnoSQL.WriteAllDatabases()
+		c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
+	})
+
 }
 
 func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {

@@ -1,9 +1,9 @@
 version: "3.9"
-name: gnosql
+name: gnosql-local
 services:
     gnosql:
-        container_name: "gnosql"
-        image: gnosql
+        container_name: "gnosql-local"
+        image: gnosql-local
         build:
             context: .
             dockerfile: Dockerfile.local
@@ -12,6 +12,10 @@ services:
             - 5454:3000
         volumes:
             - .:/app
+            - gnosqldb-data-local:/root/gnosql/db/
         environment:
             PORT: 3000
             GIN_MODE: debug
+volumes:
+  gnosqldb-data-local:
+    name: gnosqldb-data-local
