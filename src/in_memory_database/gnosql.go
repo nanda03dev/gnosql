@@ -61,15 +61,16 @@ func (gnoSQL *GnoSQL) DeleteDatabase(db *Database) bool {
 	var databases []*Database = make([]*Database, 0)
 
 	for _, database := range gnoSQL.Databases {
-		if database.DatabaseName == db.DatabaseName {
-			database.IsDeleted = true
+		if database.DatabaseName != db.DatabaseName {
+			// database.IsDeleted = true
+			databases = append(databases, database)
+		} else {
+			database.ClearDatabase()
+			println("in DeleteDatabase ", database.DatabaseName)
 		}
-		databases = append(databases, database)
-
 	}
-	gnoSQL.Databases = databases
 
-	utils.DeleteFile(db.DatabaseFileFullPath)
+	gnoSQL.Databases = databases
 
 	return true
 }
@@ -107,6 +108,20 @@ func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
 		}
 	}
 	return nil
+}
+
+func (gnoSQL *GnoSQL) GetDatabaseAndCollection(databaseName string, CollectionName string) (*Database, *Collection) {
+	for _, database := range gnoSQL.Databases {
+		if database.DatabaseName == databaseName {
+			for _, collection := range database.Collections {
+				if collection.CollectionName == CollectionName {
+					return database, collection
+
+				}
+			}
+		}
+	}
+	return nil, nil
 }
 
 func (gnoSQL *GnoSQL) WriteAllDatabases() {

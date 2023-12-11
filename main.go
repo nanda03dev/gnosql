@@ -43,11 +43,9 @@ func main() {
 
 	var gnoSQL *in_memory_database.GnoSQL = in_memory_database.CreateGnoSQL()
 
-	router.GenerateSeedRoute(ginRouter, gnoSQL)
+	gnoSQL.LoadAllDatabases()
 
-	router.LoadDatabasesAndRoutes(ginRouter, gnoSQL)
-
-	router.GenerateDatabaseRoutes(ginRouter, gnoSQL)
+	router.RouterInit(ginRouter, gnoSQL)
 
 	docs.SwaggerInfo.BasePath = "/"
 	docs.SwaggerInfo.Host = "localhost:5454"

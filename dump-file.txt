@@ -39,7 +39,7 @@ for indexName, indexMap := range db.index {
 [
 	// Read by index
 	router.POST(path+"/filterbyindex", func(c *gin.Context) {
-		if db.IsDeleted {
+		if db == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": db.DatabaseName + " database deleted"})
 			return
 		}

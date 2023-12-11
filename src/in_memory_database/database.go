@@ -3,6 +3,7 @@ package in_memory_database
 import (
 	"encoding/json"
 	"fmt"
+	"gnosql/src/utils"
 	"os"
 	"time"
 )
@@ -16,6 +17,14 @@ type Database struct {
 	Collections          []*Collection `json:"Collections"`
 	Config               Config        `json:"Config"`
 	IsDeleted            bool          `json:"IsDeleted"`
+}
+
+func (db *Database) ClearDatabase() {
+	utils.DeleteFile(db.DatabaseFileFullPath)
+
+	for _, collection := range db.Collections {
+		collection.Clear()
+	}
 }
 
 func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Collection {
