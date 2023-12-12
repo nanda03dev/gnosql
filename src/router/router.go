@@ -48,8 +48,7 @@ func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	})
 
 	router.GET(path+"/load-to-disk", func(c *gin.Context) {
-		gnoSQL.WriteAllDatabases()
-		c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
+		handler.LoadDatabaseToDisk(c, gnoSQL)
 	})
 
 }
@@ -75,6 +74,12 @@ func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		DatabaseName := c.Param("DatabaseName")
 		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 		handler.GetAllCollections(c, db)
+	})
+
+	// Get collection stats
+	router.GET(path+"/:CollectionName/stats", func(c *gin.Context) {
+		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+		handler.CollectionStats(c, db, collection)
 	})
 
 }
@@ -118,9 +123,4 @@ func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		handler.ReadAllDocument(c, db, collection)
 	})
 
-	// Get collection stats
-	router.GET(path+"/stats", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.CollectionStats(c, db, collection)
-	})
 }

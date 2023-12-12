@@ -109,15 +109,15 @@ func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
 	return nil
 }
 
-func (gnoSQL *GnoSQL) GetDatabaseAndCollection(databaseName string, CollectionName string) (*Database, *Collection) {
+func (gnoSQL *GnoSQL) GetDatabaseAndCollection(databaseName string, collectionName string) (*Database, *Collection) {
 	for _, database := range gnoSQL.Databases {
 		if database.DatabaseName == databaseName {
 			for _, collection := range database.Collections {
-				if collection.CollectionName == CollectionName {
+				if collection.CollectionName == collectionName {
 					return database, collection
-
 				}
 			}
+			return database, nil
 		}
 	}
 	return nil, nil

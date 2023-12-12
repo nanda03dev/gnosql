@@ -15,7 +15,7 @@ import (
 // @Param        database  body router.DatabaseRequestInput  true  "Database"
 // @Success      200 "database created successfully"
 // @Success      400 "Database already exists"
-// @Router       /add-database [post]
+// @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	var value map[string]interface{}
 
@@ -42,7 +42,7 @@ func CreateDatabase(c *gin.Context, router *gin.Engine, gnoSQL *in_memory_databa
 // @Param        database  body router.DatabaseRequestInput  true  "Database"
 // @Success      200 "database deleted successfully"
 // @Success      400 "Unexpected error while delete database"
-// @Router       /delete-database [post]
+// @Router       /database/delete [post]
 func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var value map[string]interface{}
 
@@ -68,7 +68,7 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Tags         database
 // @Produce      json
 // @Success      200 {array} string
-// @Router       /get-all-database [get]
+// @Router       /database/get-all [get]
 func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	// Fetch all data from the database
 	databaseNames := make([]string, 0)
@@ -85,6 +85,17 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
 }
 
+// @Summary      Load database to disk
+// @Description  Load database to disk.
+// @Tags         database
+// @Produce      json
+// @Success      200 {array} string
+// @Router       /database/load-to-disk [get]
+func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	gnoSQL.WriteAllDatabases()
+	c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
+}
+
 // @Summary      Create new collection
 // @Description  To create new collection.
 // @Tags         collection
@@ -93,7 +104,7 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Param        collection  body in_memory_database.CollectionInput  true  "Collection"
 // @Success      200 "collection created successfully"
 // @Success      400 "collection already exists"
-// @Router       /{databaseName}/add-collection [post]
+// @Router       /collection/{databaseName}/add [post]
 func CreateCollection(c *gin.Context, router *gin.Engine, db *in_memory_database.Database) {
 
 	if db == nil {
@@ -143,7 +154,7 @@ func CreateCollection(c *gin.Context, router *gin.Engine, db *in_memory_database
 // @Param        collection  body router.DatabaseRequestInput  true  "collection"
 // @Success      200 "collection deleted successfully"
 // @Success      400 "Unexpected error while delete collection"
-// @Router       /{databaseName}/delete-collection [post]
+// @Router       /collection/{databaseName}/delete [post]
 func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -172,7 +183,7 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Produce      json
 // @Param        databaseName  path      string  true  "databaseName"
 // @Success      200 {array} string
-// @Router       /{databaseName}/get-all-collection [get]
+// @Router       /collection/{databaseName}/get-all [get]
 func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -201,7 +212,7 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 // @Param        collectionName  path      string  true  "collectionName"
 // @Success      200 {object}  in_memory_database.Index
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/stats [get]
+// @Router       /collection/{databaseName}/{collectionName}/stats [get]
 func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -213,11 +224,8 @@ func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection
 		return
 	}
 
-	// Fetch all data from the database
-	allData := collection.GetIndexData()
-
 	// Serialize data to JSON
-	responseData, _ := json.Marshal(allData)
+	responseData, _ := json.Marshal(collection.Stats())
 
 	// Send the JSON response
 	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
@@ -232,7 +240,7 @@ func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection
 // @Param        document  body in_memory_database.Document  true  "Document"
 // @Success      200 "Document created successfully"
 // @Success      400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/ [post]
+// @Router       /document/{databaseName}/{collectionName}/ [post]
 func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 
 	if db == nil {
@@ -265,7 +273,7 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Param        id  path      string  true  "search document by id"
 // @Success      200 {object}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/{id} [get]
+// @Router       /document/{databaseName}/{collectionName}/{id} [get]
 func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 
 	if db == nil {
@@ -298,7 +306,7 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 // @Param        document body in_memory_database.GenericKeyValue  true  "GenericKeyValue"
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/filter [post]
+// @Router       /document/{databaseName}/{collectionName}/filter [post]
 func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -332,7 +340,7 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Param        document  body in_memory_database.Document  true  "Document"
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/{id} [put]
+// @Router       /document/{databaseName}/{collectionName}/{id} [put]
 func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -365,7 +373,7 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Param        id  path      string  true  "delete document by id"
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/{id} [delete]
+// @Router       /document/{databaseName}/{collectionName}/{id} [delete]
 func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -393,7 +401,7 @@ func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Param        collectionName  path      string  true  "collectionName"
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /{databaseName}/{collectionName}/all-data [get]
+// @Router       /document/{databaseName}/{collectionName}/all-data [get]
 func ReadAllDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})

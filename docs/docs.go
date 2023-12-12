@@ -24,109 +24,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/add-database": {
-            "post": {
-                "description": "To create new database",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "database"
-                ],
-                "summary": "Create new database",
-                "parameters": [
-                    {
-                        "description": "Database",
-                        "name": "database",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/router.DatabaseRequestInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "database created successfully"
-                    },
-                    "400": {
-                        "description": "Database already exists"
-                    }
-                }
-            }
-        },
-        "/delete-database": {
-            "post": {
-                "description": "To delete database",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "database"
-                ],
-                "summary": "Delete database",
-                "parameters": [
-                    {
-                        "description": "Database",
-                        "name": "database",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/router.DatabaseRequestInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "database deleted successfully"
-                    },
-                    "400": {
-                        "description": "Unexpected error while delete database"
-                    }
-                }
-            }
-        },
-        "/generate-seed-data": {
-            "get": {
-                "description": "This will create generate seed database.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "generate-seed-data"
-                ],
-                "summary": "generate seed database",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/get-all-database": {
-            "get": {
-                "description": "To get all database.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "database"
-                ],
-                "summary": "Get all database",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/{databaseName}/add-collection": {
+        "/collection/{databaseName}/add": {
             "post": {
                 "description": "To create new collection.",
                 "produces": [
@@ -164,7 +62,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/delete-collection": {
+        "/collection/{databaseName}/delete": {
             "post": {
                 "description": "To delete collection",
                 "produces": [
@@ -202,7 +100,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/get-all-collection": {
+        "/collection/{databaseName}/get-all": {
             "get": {
                 "description": "To get all collections",
                 "produces": [
@@ -234,7 +132,154 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/{collectionName}/": {
+        "/collection/{databaseName}/{collectionName}/stats": {
+            "get": {
+                "description": "Collection stats",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "collection"
+                ],
+                "summary": "Collection stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "databaseName",
+                        "name": "databaseName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "collectionName",
+                        "name": "collectionName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.Index"
+                        }
+                    },
+                    "400": {
+                        "description": "Database/Collection deleted"
+                    }
+                }
+            }
+        },
+        "/database/add": {
+            "post": {
+                "description": "To create new database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Create new database",
+                "parameters": [
+                    {
+                        "description": "Database",
+                        "name": "database",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "database created successfully"
+                    },
+                    "400": {
+                        "description": "Database already exists"
+                    }
+                }
+            }
+        },
+        "/database/delete": {
+            "post": {
+                "description": "To delete database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Delete database",
+                "parameters": [
+                    {
+                        "description": "Database",
+                        "name": "database",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "database deleted successfully"
+                    },
+                    "400": {
+                        "description": "Unexpected error while delete database"
+                    }
+                }
+            }
+        },
+        "/database/get-all": {
+            "get": {
+                "description": "To get all database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Get all database",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/database/load-to-disk": {
+            "get": {
+                "description": "Load database to disk.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Load database to disk",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/document/{databaseName}/{collectionName}/": {
             "post": {
                 "description": "To create new document",
                 "produces": [
@@ -279,7 +324,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/{collectionName}/all-data": {
+        "/document/{databaseName}/{collectionName}/all-data": {
             "get": {
                 "description": "Read all document",
                 "produces": [
@@ -321,7 +366,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/{collectionName}/filter": {
+        "/document/{databaseName}/{collectionName}/filter": {
             "post": {
                 "description": "Filter document",
                 "produces": [
@@ -372,46 +417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/{databaseName}/{collectionName}/stats": {
-            "get": {
-                "description": "Collection stats",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "collection"
-                ],
-                "summary": "Collection stats",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/in_memory_database.Index"
-                        }
-                    },
-                    "400": {
-                        "description": "Database/Collection deleted"
-                    }
-                }
-            }
-        },
-        "/{databaseName}/{collectionName}/{id}": {
+        "/document/{databaseName}/{collectionName}/{id}": {
             "get": {
                 "description": "Read document by id.",
                 "produces": [
@@ -553,6 +559,23 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/generate-seed-data": {
+            "get": {
+                "description": "This will create generate seed database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "generate-seed-data"
+                ],
+                "summary": "generate seed database",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -610,7 +633,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "localhost:5454",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "GnoSQL Database",

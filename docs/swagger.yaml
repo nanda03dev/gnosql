@@ -33,7 +33,7 @@ definitions:
         description: 'Example: databaseName'
         type: string
     type: object
-host: localhost:8080
+host: localhost:5454
 info:
   contact:
     email: nanda23311@gmail.com
@@ -46,7 +46,174 @@ info:
   title: GnoSQL Database
   version: "1.0"
 paths:
-  /{databaseName}/{collectionName}/:
+  /collection/{databaseName}/{collectionName}/stats:
+    get:
+      description: Collection stats
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collectionName
+        in: path
+        name: collectionName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/in_memory_database.Index'
+        "400":
+          description: Database/Collection deleted
+      summary: Collection stats
+      tags:
+      - collection
+  /collection/{databaseName}/add:
+    post:
+      description: To create new collection.
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: Collection
+        in: body
+        name: collection
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.CollectionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: collection created successfully
+        "400":
+          description: collection already exists
+      summary: Create new collection
+      tags:
+      - collection
+  /collection/{databaseName}/delete:
+    post:
+      description: To delete collection
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      - description: collection
+        in: body
+        name: collection
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: collection deleted successfully
+        "400":
+          description: Unexpected error while delete collection
+      summary: Delete collection
+      tags:
+      - collection
+  /collection/{databaseName}/get-all:
+    get:
+      description: To get all collections
+      parameters:
+      - description: databaseName
+        in: path
+        name: databaseName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get all collections
+      tags:
+      - collection
+  /database/add:
+    post:
+      description: To create new database
+      parameters:
+      - description: Database
+        in: body
+        name: database
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: database created successfully
+        "400":
+          description: Database already exists
+      summary: Create new database
+      tags:
+      - database
+  /database/delete:
+    post:
+      description: To delete database
+      parameters:
+      - description: Database
+        in: body
+        name: database
+        required: true
+        schema:
+          $ref: '#/definitions/router.DatabaseRequestInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: database deleted successfully
+        "400":
+          description: Unexpected error while delete database
+      summary: Delete database
+      tags:
+      - database
+  /database/get-all:
+    get:
+      description: To get all database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get all database
+      tags:
+      - database
+  /database/load-to-disk:
+    get:
+      description: Load database to disk.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Load database to disk
+      tags:
+      - database
+  /document/{databaseName}/{collectionName}/:
     post:
       description: To create new document
       parameters:
@@ -76,7 +243,7 @@ paths:
       summary: Create new document
       tags:
       - document
-  /{databaseName}/{collectionName}/{id}:
+  /document/{databaseName}/{collectionName}/{id}:
     delete:
       description: To delete document
       parameters:
@@ -173,7 +340,7 @@ paths:
       summary: Update document
       tags:
       - document
-  /{databaseName}/{collectionName}/all-data:
+  /document/{databaseName}/{collectionName}/all-data:
     get:
       description: Read all document
       parameters:
@@ -201,7 +368,7 @@ paths:
       summary: Read all document
       tags:
       - document
-  /{databaseName}/{collectionName}/filter:
+  /document/{databaseName}/{collectionName}/filter:
     post:
       description: Filter document
       parameters:
@@ -235,143 +402,6 @@ paths:
       summary: Filter document
       tags:
       - document
-  /{databaseName}/{collectionName}/stats:
-    get:
-      description: Collection stats
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/in_memory_database.Index'
-        "400":
-          description: Database/Collection deleted
-      summary: Collection stats
-      tags:
-      - collection
-  /{databaseName}/add-collection:
-    post:
-      description: To create new collection.
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: Collection
-        in: body
-        name: collection
-        required: true
-        schema:
-          $ref: '#/definitions/in_memory_database.CollectionInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: collection created successfully
-        "400":
-          description: collection already exists
-      summary: Create new collection
-      tags:
-      - collection
-  /{databaseName}/delete-collection:
-    post:
-      description: To delete collection
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collection
-        in: body
-        name: collection
-        required: true
-        schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: collection deleted successfully
-        "400":
-          description: Unexpected error while delete collection
-      summary: Delete collection
-      tags:
-      - collection
-  /{databaseName}/get-all-collection:
-    get:
-      description: To get all collections
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              type: string
-            type: array
-      summary: Get all collections
-      tags:
-      - collection
-  /add-database:
-    post:
-      description: To create new database
-      parameters:
-      - description: Database
-        in: body
-        name: database
-        required: true
-        schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: database created successfully
-        "400":
-          description: Database already exists
-      summary: Create new database
-      tags:
-      - database
-  /delete-database:
-    post:
-      description: To delete database
-      parameters:
-      - description: Database
-        in: body
-        name: database
-        required: true
-        schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: database deleted successfully
-        "400":
-          description: Unexpected error while delete database
-      summary: Delete database
-      tags:
-      - database
   /generate-seed-data:
     get:
       description: This will create generate seed database.
@@ -383,19 +413,4 @@ paths:
       summary: generate seed database
       tags:
       - generate-seed-data
-  /get-all-database:
-    get:
-      description: To get all database.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              type: string
-            type: array
-      summary: Get all database
-      tags:
-      - database
 swagger: "2.0"

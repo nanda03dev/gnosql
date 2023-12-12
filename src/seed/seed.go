@@ -91,6 +91,8 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) *in_memo
 		}
 
 	}
+	// manually write seed test database to disk 
+	go db.SaveToFile()
 
 	return db
 
