@@ -10,14 +10,15 @@ import (
 
 type GenericKeyValue map[string]interface{}
 
-type IndexValue map[string]map[string]*Document
+type IndexValue map[string]map[string]string
 
 type Index map[string]IndexValue
 
 type Document map[string]interface{}
 
 type DocumentsMap map[string]Document
-type DocumentSlice []*Document
+
+type DocumentIds []string
 
 type Collection struct {
 	CollectionName string   `json:"CollectionName"`
@@ -25,8 +26,8 @@ type Collection struct {
 	Index          Index    `json:"Index"`     // Index map Ex: {"city" :{ chennai: [id1, ids2]}}
 	IndexKeys      []string `json:"IndexKeys"` // Index keys ["city", "pincode"]
 	mu             sync.RWMutex
-	DocumentsMap   DocumentsMap  `json:"DocumentsMap"`
-	DocumentSlice  DocumentSlice `json:"DocumentSlice"`
+	DocumentsMap   DocumentsMap `json:"DocumentsMap"`
+	DocumentIds    DocumentIds  `json:"DocumentIds"`
 }
 
 type CollectionInput struct {
@@ -42,7 +43,7 @@ func CreateCollection(collectionInput CollectionInput) *Collection {
 		CollectionName: collectionInput.CollectionName,
 		IndexKeys:      collectionInput.IndexKeys,
 		DocumentsMap:   make(DocumentsMap),
-		DocumentSlice:  make(DocumentSlice, 0),
+		DocumentIds:    make(DocumentIds, 0),
 		Index:          make(Index),
 		mu:             sync.RWMutex{},
 		IsDeleted:      false,
@@ -57,7 +58,7 @@ func LoadCollections(collections []*Collection) []*Collection {
 			CollectionName: collection.CollectionName,
 			IndexKeys:      collection.IndexKeys,
 			DocumentsMap:   collection.DocumentsMap,
-			DocumentSlice:  collection.DocumentSlice,
+			DocumentIds:    collection.DocumentIds,
 			Index:          collection.Index,
 			mu:             sync.RWMutex{},
 			IsDeleted:      collection.IsDeleted,
@@ -79,9 +80,11 @@ func (collection *Collection) Create(value Document) interface{} {
 	document["id"] = uniqueUuid
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
 
+	println("document ", document["userNa"])
+
 	collection.DocumentsMap[uniqueUuid] = document
 
-	collection.DocumentSlice = append(collection.DocumentSlice, &document)
+	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
 
 	collection.createIndex(document)
 
@@ -338,7 +341,7 @@ func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
 			if id, ok := document["id"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), &document, false)
+				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
 			}
 		}
 	}
@@ -349,8 +352,8 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
 			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
 				var id string = oldDocument["id"].(string)
-				collection.changeIndex(eachIndex, oldIndexValue.(string), id, &oldDocument, true)
-				collection.changeIndex(eachIndex, newIndexValue.(string), id, &updatedDocument, false)
+				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
+				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
 
 			}
 		}
@@ -360,20 +363,20 @@ func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
 			if id, ok := document["id"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), &document, true)
+				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
 			}
 		}
 	}
 }
 
-func (collection *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, document *Document, isDelete bool) {
+func (collection *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, isDelete bool) {
 	if _, exists := collection.Index[indexKey]; !exists {
 		collection.Index[indexKey] = make(IndexValue)
 	}
 
 	if uniqueUuid != "" {
 		if _, exists := collection.Index[indexKey][indexValue]; !exists {
-			collection.Index[indexKey][indexValue] = make(map[string]*Document)
+			collection.Index[indexKey][indexValue] = make(map[string]string)
 			// Index[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
 		}
 		if isDelete {
@@ -387,7 +390,7 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, un
 			return
 		}
 
-		collection.Index[indexKey][indexValue][uniqueUuid] = document
+		collection.Index[indexKey][indexValue][uniqueUuid] = "ok"
 		// Index[name][kumar] = append([ids1,ids2], uniqueUuid)
 	}
 }
