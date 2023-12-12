@@ -16,7 +16,7 @@ import (
 // @Success      200 "database created successfully"
 // @Success      400 "Database already exists"
 // @Router       /database/add [post]
-func CreateDatabase(c *gin.Context, router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var value map[string]interface{}
 
 	if err := c.BindJSON(&value); err != nil {
@@ -105,7 +105,7 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 "collection created successfully"
 // @Success      400 "collection already exists"
 // @Router       /collection/{databaseName}/add [post]
-func CreateCollection(c *gin.Context, router *gin.Engine, db *in_memory_database.Database) {
+func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})

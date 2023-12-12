@@ -24,7 +24,7 @@ func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /generate-seed-data [get]
 func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	router.GET("/generate-seed-data", func(c *gin.Context) {
-		var database *in_memory_database.Database = seed.SeedData(router, gnoSQL)
+		var database *in_memory_database.Database = seed.SeedData(gnoSQL)
 		if database == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"status": "Seed database and routes exists already"})
 			return
@@ -36,7 +36,7 @@ func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	path := "/database"
 	router.POST(path+"/add", func(c *gin.Context) {
-		handler.CreateDatabase(c, router, gnoSQL)
+		handler.CreateDatabase(c, gnoSQL)
 	})
 
 	router.POST(path+"/delete", func(c *gin.Context) {
@@ -61,7 +61,7 @@ func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		DatabaseName := c.Param("DatabaseName")
 		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 
-		handler.CreateCollection(c, router, db)
+		handler.CreateCollection(c, db)
 	})
 
 	router.DELETE(path+"/delete", func(c *gin.Context) {

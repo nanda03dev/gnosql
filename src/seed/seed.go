@@ -5,11 +5,9 @@ import (
 	"gnosql/src/in_memory_database"
 	"math/rand"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
 )
 
-func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
+func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 	testDBName := "test"
 
 	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
@@ -91,7 +89,7 @@ func SeedData(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) *in_memo
 		}
 
 	}
-	// manually write seed test database to disk 
+	// manually write seed test database to disk
 	go db.SaveToFile()
 
 	return db

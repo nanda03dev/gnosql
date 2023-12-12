@@ -10,9 +10,14 @@ type GnoSQL struct {
 }
 
 func CreateGnoSQL() *GnoSQL {
-	return &GnoSQL{
+	gnoSQL := &GnoSQL{
 		Databases: make([]*Database, 0),
 	}
+
+	// TODO function added, not tested, keeping this for future use
+	// runtime.SetFinalizer(gnoSQL, cleanupFunction)
+
+	return gnoSQL
 }
 
 func (gnoSQL *GnoSQL) CreateDatabase(databaseName string) *Database {
@@ -32,8 +37,6 @@ func (gnoSQL *GnoSQL) CreateDatabase(databaseName string) *Database {
 	}
 
 	db.SaveToFile()
-
-	go db.StartTimerToSaveFile()
 
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
 
@@ -128,3 +131,10 @@ func (gnoSQL *GnoSQL) WriteAllDatabases() {
 		database.SaveToFile()
 	}
 }
+
+// // Function to be executed before the object is deleted
+// func cleanupFunction(gnoSQL *GnoSQL) {
+// 	println(" cleanupFunction called once its garbage collected ", gnoSQL.Databases)
+// 	// Add your cleanup logic here
+// 	// This function will be executed when the object is garbage collected
+// }

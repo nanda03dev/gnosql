@@ -10,13 +10,14 @@ import (
 
 type GenericKeyValue map[string]interface{}
 
-type IndexValue map[string]map[string]string
+type IndexValue map[string]map[string]*Document
 
 type Index map[string]IndexValue
 
 type Document map[string]interface{}
 
-type DataMap map[string]Document
+type DocumentsMap map[string]Document
+type DocumentSlice []*Document
 
 type Collection struct {
 	CollectionName string   `json:"CollectionName"`
@@ -24,7 +25,8 @@ type Collection struct {
 	Index          Index    `json:"Index"`     // Index map Ex: {"city" :{ chennai: [id1, ids2]}}
 	IndexKeys      []string `json:"IndexKeys"` // Index keys ["city", "pincode"]
 	mu             sync.RWMutex
-	DataMap        DataMap `json:"DataMap"`
+	DocumentsMap   DocumentsMap  `json:"DocumentsMap"`
+	DocumentSlice  DocumentSlice `json:"DocumentSlice"`
 }
 
 type CollectionInput struct {
@@ -39,7 +41,8 @@ func CreateCollection(collectionInput CollectionInput) *Collection {
 	return &Collection{
 		CollectionName: collectionInput.CollectionName,
 		IndexKeys:      collectionInput.IndexKeys,
-		DataMap:        make(DataMap),
+		DocumentsMap:   make(DocumentsMap),
+		DocumentSlice:  make(DocumentSlice, 0),
 		Index:          make(Index),
 		mu:             sync.RWMutex{},
 		IsDeleted:      false,
@@ -53,7 +56,8 @@ func LoadCollections(collections []*Collection) []*Collection {
 		collectionInstance := &Collection{
 			CollectionName: collection.CollectionName,
 			IndexKeys:      collection.IndexKeys,
-			DataMap:        collection.DataMap,
+			DocumentsMap:   collection.DocumentsMap,
+			DocumentSlice:  collection.DocumentSlice,
 			Index:          collection.Index,
 			mu:             sync.RWMutex{},
 			IsDeleted:      collection.IsDeleted,
@@ -71,11 +75,15 @@ func (collection *Collection) Create(value Document) interface{} {
 
 	uniqueUuid := utils.Generate16DigitUUID()
 
-	value["id"] = uniqueUuid
-	value["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
-	collection.DataMap[uniqueUuid] = value
+	var document Document = value
+	document["id"] = uniqueUuid
+	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
 
-	collection.createIndex(value)
+	collection.DocumentsMap[uniqueUuid] = document
+
+	collection.DocumentSlice = append(collection.DocumentSlice, &document)
+
+	collection.createIndex(document)
 
 	return value
 }
@@ -83,14 +91,12 @@ func (collection *Collection) Create(value Document) interface{} {
 func (collection *Collection) Read(id string) interface{} {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
-	return collection.DataMap[id]
+	return collection.DocumentsMap[id]
 }
 
 func (collection *Collection) Filter(filters []GenericKeyValue) interface{} {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
-
-	var results []interface{}
 
 	filtersWithoutIndex := make([]GenericKeyValue, 0)
 	filtersWithIndex := make([]GenericKeyValue, 0)
@@ -106,22 +112,63 @@ outerLoop:
 		filtersWithoutIndex = append(filtersWithoutIndex, filter)
 	}
 
-	var filteredData DataMap
+	var filteredData DocumentsMap
 
 	if len(filtersWithIndex) > 0 {
-		filteredData = collection.filterDataByIndex(filtersWithIndex)
+		filteredData = collection.filterDataWithIndex(filtersWithIndex)
 	} else {
-		filteredData = collection.DataMap
+		filteredData = collection.DocumentsMap
 	}
 
 	fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
 	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
 	fmt.Printf("\n Scanning %d documents \n", len(filteredData))
 
-	for id := range filteredData {
+	// Create a channel to communicate results
+	resultChannel := make(chan Document)
+
+	workerCount := 1
+	// Use a WaitGroup to wait for the goroutine to finish
+	var wg sync.WaitGroup
+	wg.Add(workerCount)
+
+	// filteredSliceLength := len(filteredSlice)
+	// for i := 0; i < workerCount; i++ {
+	// 	go collection.filterDataWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredSlice[i*filteredSliceLength/3:(i+1)*filteredSliceLength/3])
+	// }
+
+	go collection.filterDataWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredData)
+
+	// Use another goroutine to close the result channel when the filtering is done
+	go func() {
+		// Close the result channel to signal that no more values will be sent,
+		//then only resultChannel for loop will end, otherwise it will continult wait
+		defer close(resultChannel)
+
+		// Wait for the worker goroutine to finish
+		wg.Wait()
+
+	}()
+
+	var results = make([]interface{}, 0)
+
+	// Retrieve the results from the channel in a loop
+	for result := range resultChannel {
+		results = append(results, result)
+	}
+
+	return results
+
+}
+
+func (collection *Collection) filterDataWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []GenericKeyValue, documentsMap DocumentsMap) {
+	defer wg.Done()
+
+	for id := range documentsMap {
 		var isMatch bool = true
-		document := collection.DataMap[id]
-		for _, filter := range filtersWithoutIndex {
+		document := documentsMap[id]
+
+		for _, filter := range filter {
 			if value, ok := document[filter["key"].(string)]; ok {
 				if value != filter["value"].(string) {
 					isMatch = false
@@ -131,35 +178,21 @@ outerLoop:
 		}
 
 		if isMatch {
-			results = append(results, document)
+			println("filter Matched, sending to channel ")
+			// results = append(results, document)
+			resultChannel <- document
+			println("filter Matched, done ")
 		}
 
 	}
-	return results
-
 }
 
-func (collection *Collection) FilterByIndexKey(request []GenericKeyValue) interface{} {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
-	var results = make([]interface{}, 0)
-
-	resultIds := collection.filterDataByIndex(request)
-
-	for eachId := range resultIds {
-		results = append(results, collection.DataMap[eachId])
-	}
-
-	return results
-}
-
-func (collection *Collection) filterDataByIndex(request []GenericKeyValue) DataMap {
+func (collection *Collection) filterDataWithIndex(filters []GenericKeyValue) DocumentsMap {
 	isNotStarted := false
-	resultIds := make(DataMap)
+	resultIds := make(DocumentsMap)
 	filteredIndexMap := make(Index)
 
-	for _, indexMap := range request {
+	for _, indexMap := range filters {
 		for index, indexIds := range collection.Index {
 			if indexMap["key"].(string) == index {
 				filteredIndexMap[index] = indexIds
@@ -167,7 +200,7 @@ func (collection *Collection) filterDataByIndex(request []GenericKeyValue) DataM
 		}
 	}
 
-	slices.SortFunc(request,
+	slices.SortFunc(filters,
 		func(a, b GenericKeyValue) int {
 			keyToSearchA := a["key"].(string)
 			valueToSearchA := a["value"].(string)
@@ -183,7 +216,7 @@ func (collection *Collection) filterDataByIndex(request []GenericKeyValue) DataM
 		})
 
 outerLoop:
-	for _, eachIndexMap := range request {
+	for _, eachIndexMap := range filters {
 
 		keyToSearch := eachIndexMap["key"].(string)
 		valueToSearch := eachIndexMap["value"].(string)
@@ -197,7 +230,7 @@ outerLoop:
 					}
 					isNotStarted = true
 				} else {
-					tempIds := make(DataMap)
+					tempIds := make(DocumentsMap)
 					for eachId := range resultIds {
 						if _, exists := idsMap[eachId]; exists {
 							tempIds[eachId] = Document{}
@@ -220,19 +253,19 @@ func (collection *Collection) Update(id string, updateInputData Document) interf
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
 
-	if _, exists := collection.DataMap[id]; !exists {
+	if _, exists := collection.DocumentsMap[id]; !exists {
 		return fmt.Errorf("id '%s' not found", id)
 	}
 
-	collection.updateIndex(collection.DataMap[id], updateInputData)
+	collection.updateIndex(collection.DocumentsMap[id], updateInputData)
 
-	var existingData, _ = collection.DataMap[id]
+	var existingData, _ = collection.DocumentsMap[id]
 
 	for key, value := range updateInputData {
 		existingData[key] = value
 	}
 
-	collection.DataMap[id] = existingData
+	collection.DocumentsMap[id] = existingData
 
 	return existingData
 }
@@ -241,8 +274,8 @@ func (collection *Collection) Delete(id string) error {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
 
-	if existingData, exists := collection.DataMap[id]; exists {
-		delete(collection.DataMap, id)
+	if existingData, exists := collection.DocumentsMap[id]; exists {
+		delete(collection.DocumentsMap, id)
 
 		collection.deleteIndex(existingData)
 	} else {
@@ -256,8 +289,8 @@ func (collection *Collection) GetIds() []string {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
-	keys := make([]string, 0, len(collection.DataMap))
-	for key := range collection.DataMap {
+	keys := make([]string, 0, len(collection.DocumentsMap))
+	for key := range collection.DocumentsMap {
 		keys = append(keys, key)
 	}
 	return keys
@@ -267,9 +300,9 @@ func (collection *Collection) GetAllData() interface{} {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
-	details := make([]interface{}, 0, len(collection.DataMap))
+	details := make([]interface{}, 0, len(collection.DocumentsMap))
 
-	for _, value := range collection.DataMap {
+	for _, value := range collection.DocumentsMap {
 		details = append(details, value)
 	}
 
@@ -279,7 +312,7 @@ func (collection *Collection) GetAllData() interface{} {
 func (collection *Collection) Clear() {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
-	collection.DataMap = make(DataMap)
+	collection.DocumentsMap = make(DocumentsMap)
 	collection.Index = make(Index)
 }
 
@@ -296,51 +329,51 @@ func (collection *Collection) Stats() interface{} {
 	statsMap := make(map[string]interface{})
 	statsMap["collectionName"] = collection.CollectionName
 	statsMap["indexKeys"] = collection.IndexKeys
-	statsMap["documents"] = len(collection.DataMap)
+	statsMap["documents"] = len(collection.DocumentsMap)
 
 	return statsMap
 }
 
-func (collection *Collection) createIndex(body Document) {
+func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := body[eachIndex]; ok {
-			if id, ok := body["id"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
+		if indexName, ok := document[eachIndex]; ok {
+			if id, ok := document["id"]; ok {
+				collection.changeIndex(eachIndex, indexName.(string), id.(string), &document, false)
 			}
 		}
 	}
 }
 
-func (collection *Collection) updateIndex(oldData, updatedData Document) {
+func (collection *Collection) updateIndex(oldDocument Document, updatedDocument Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if oldIndexValue, ok := oldData[eachIndex]; ok {
-			if newIndexValue, ok := updatedData[eachIndex]; ok {
-				var id string = oldData["id"].(string)
-				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
-				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
+		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
+			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
+				var id string = oldDocument["id"].(string)
+				collection.changeIndex(eachIndex, oldIndexValue.(string), id, &oldDocument, true)
+				collection.changeIndex(eachIndex, newIndexValue.(string), id, &updatedDocument, false)
 
 			}
 		}
 	}
 }
-func (collection *Collection) deleteIndex(body Document) {
+func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := body[eachIndex]; ok {
-			if id, ok := body["id"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
+		if indexName, ok := document[eachIndex]; ok {
+			if id, ok := document["id"]; ok {
+				collection.changeIndex(eachIndex, indexName.(string), id.(string), &document, true)
 			}
 		}
 	}
 }
 
-func (collection *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, isDelete bool) {
+func (collection *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, document *Document, isDelete bool) {
 	if _, exists := collection.Index[indexKey]; !exists {
 		collection.Index[indexKey] = make(IndexValue)
 	}
 
 	if uniqueUuid != "" {
 		if _, exists := collection.Index[indexKey][indexValue]; !exists {
-			collection.Index[indexKey][indexValue] = make(map[string]string)
+			collection.Index[indexKey][indexValue] = make(map[string]*Document)
 			// Index[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
 		}
 		if isDelete {
@@ -354,7 +387,7 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, un
 			return
 		}
 
-		collection.Index[indexKey][indexValue][uniqueUuid] = "Ok"
+		collection.Index[indexKey][indexValue][uniqueUuid] = document
 		// Index[name][kumar] = append([ids1,ids2], uniqueUuid)
 	}
 }
