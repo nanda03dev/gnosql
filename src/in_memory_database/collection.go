@@ -80,8 +80,6 @@ func (collection *Collection) Create(value Document) interface{} {
 	document["id"] = uniqueUuid
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
 
-	println("document ", document["userNa"])
-
 	collection.DocumentsMap[uniqueUuid] = document
 
 	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
@@ -115,32 +113,33 @@ outerLoop:
 		filtersWithoutIndex = append(filtersWithoutIndex, filter)
 	}
 
-	var filteredData DocumentsMap
+	var filteredIds DocumentIds
 
 	if len(filtersWithIndex) > 0 {
-		filteredData = collection.filterDataWithIndex(filtersWithIndex)
+		filteredIds = collection.filterWithIndex(filtersWithIndex)
 	} else {
-		filteredData = collection.DocumentsMap
+		filteredIds = collection.DocumentIds
 	}
 
 	fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
 	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
-	fmt.Printf("\n Scanning %d documents \n", len(filteredData))
+	fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
 
 	// Create a channel to communicate results
 	resultChannel := make(chan Document)
 
-	workerCount := 1
+	workerCount := 4
 	// Use a WaitGroup to wait for the goroutine to finish
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
 
-	// filteredSliceLength := len(filteredSlice)
-	// for i := 0; i < workerCount; i++ {
-	// 	go collection.filterDataWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredSlice[i*filteredSliceLength/3:(i+1)*filteredSliceLength/3])
-	// }
+	filteredIdsLength := len(filteredIds)
 
-	go collection.filterDataWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredData)
+	for i := 0; i < workerCount; i++ {
+		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds[i*filteredIdsLength/workerCount:(i+1)*filteredIdsLength/workerCount])
+	}
+
+	// go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds)
 
 	// Use another goroutine to close the result channel when the filtering is done
 	go func() {
@@ -164,12 +163,12 @@ outerLoop:
 
 }
 
-func (collection *Collection) filterDataWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []GenericKeyValue, documentsMap DocumentsMap) {
+func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []GenericKeyValue, filteredIds DocumentIds) {
 	defer wg.Done()
-
-	for id := range documentsMap {
+	
+	for _, id := range filteredIds {
 		var isMatch bool = true
-		document := documentsMap[id]
+		document := collection.DocumentsMap[id]
 
 		for _, filter := range filter {
 			if value, ok := document[filter["key"].(string)]; ok {
@@ -181,18 +180,14 @@ func (collection *Collection) filterDataWithoutIndex(wg *sync.WaitGroup, resultC
 		}
 
 		if isMatch {
-			println("filter Matched, sending to channel ")
-			// results = append(results, document)
 			resultChannel <- document
-			println("filter Matched, done ")
 		}
 
 	}
 }
 
-func (collection *Collection) filterDataWithIndex(filters []GenericKeyValue) DocumentsMap {
-	isNotStarted := false
-	resultIds := make(DocumentsMap)
+func (collection *Collection) filterWithIndex(filters []GenericKeyValue) DocumentIds {
+
 	filteredIndexMap := make(Index)
 
 	for _, indexMap := range filters {
@@ -218,6 +213,10 @@ func (collection *Collection) filterDataWithIndex(filters []GenericKeyValue) Doc
 			return cmp.Compare(indexIdsLenA, indexIdsLenB)
 		})
 
+	isNotStarted := false
+	resultIdsMap := make(map[string]bool)
+	filteredIds := make([]string, 0)
+
 outerLoop:
 	for _, eachIndexMap := range filters {
 
@@ -229,27 +228,32 @@ outerLoop:
 
 				if !isNotStarted {
 					for eachId := range idsMap {
-						resultIds[eachId] = Document{}
+						resultIdsMap[eachId] = true
+						filteredIds = append(filteredIds, eachId)
 					}
 					isNotStarted = true
 				} else {
-					tempIds := make(DocumentsMap)
-					for eachId := range resultIds {
+					tempIdsMap := make(map[string]bool)
+					tempIds := make([]string, 0)
+
+					for eachId := range resultIdsMap {
 						if _, exists := idsMap[eachId]; exists {
-							tempIds[eachId] = Document{}
+							tempIdsMap[eachId] = true
+							tempIds = append(tempIds, eachId)
 						}
 					}
 
-					if len(tempIds) == 0 {
+					if len(tempIdsMap) == 0 {
 						break outerLoop
 					}
 
-					resultIds = tempIds
+					resultIdsMap = tempIdsMap
+					filteredIds = tempIds
 				}
 			}
 		}
 	}
-	return resultIds
+	return filteredIds
 }
 
 func (collection *Collection) Update(id string, updateInputData Document) interface{} {
