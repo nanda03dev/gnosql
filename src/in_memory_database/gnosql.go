@@ -20,7 +20,7 @@ func CreateGnoSQL() *GnoSQL {
 	return gnoSQL
 }
 
-func (gnoSQL *GnoSQL) CreateDatabase(databaseName string) *Database {
+func (gnoSQL *GnoSQL) CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Database {
 	Config := make(Config)
 	Config["version"] = 1
 
@@ -35,6 +35,8 @@ func (gnoSQL *GnoSQL) CreateDatabase(databaseName string) *Database {
 		Config:               Config,
 		IsDeleted:            false,
 	}
+
+	db.CreateCollections(collectionsInput)
 
 	db.SaveToFile()
 

@@ -394,3 +394,25 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, un
 		// IndexMap[name][kumar] = append([ids1,ids2], uniqueUuid)
 	}
 }
+
+func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
+	var collectionsInput []CollectionInput
+
+	for _, each := range collectionsInterface {
+		if collectionName, ok := each.(map[string]interface{})["collectionName"].(string); ok {
+			var indexKeys = make([]string, 0)
+
+			for _, each := range each.(map[string]interface{})["indexKeys"].([]interface{}) {
+				indexKeys = append(indexKeys, each.(string))
+			}
+
+			collectionInput := CollectionInput{
+				CollectionName: collectionName,
+				IndexKeys:      indexKeys,
+			}
+
+			collectionsInput = append(collectionsInput, collectionInput)
+		}
+	}
+	return collectionsInput
+}

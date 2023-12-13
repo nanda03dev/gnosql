@@ -2,10 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -17,20 +16,26 @@ import (
 // @Success      400 "Database already exists"
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var value map[string]interface{}
+	var value in_memory_database.MapInterface
 
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	databaseName := value["databaseName"].(string)
+	collectionsInterface := make([]interface{}, 0)
+
+	if collections, exists := value["collections"]; exists {
+		collectionsInterface = collections.([]interface{})
+	}
 
 	if dbExists := gnoSQL.GetDatabase(databaseName); dbExists != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Database already exists"})
 		return
 	}
 
-	gnoSQL.CreateDatabase(databaseName)
+	gnoSQL.CreateDatabase(databaseName, in_memory_database.ConvertToCollectionInputs(collectionsInterface))
 
 	c.JSON(http.StatusCreated, gin.H{"data": "database created successfully"})
 }
@@ -112,36 +117,14 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 		return
 	}
 
-	var value []map[string]interface{}
+	var CollectionsInterface []interface{}
 
-	if err := c.BindJSON(&value); err != nil {
+	if err := c.BindJSON(&CollectionsInterface); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var collections []in_memory_database.CollectionInput
-
-	for _, each := range value {
-		if collectionName, ok := each["collectionName"].(string); ok {
-
-			var indexKeys = make([]string, 0)
-
-			for _, each := range each["indexKeys"].([]interface{}) {
-				indexKeys = append(indexKeys, each.(string))
-			}
-
-			collection := in_memory_database.CollectionInput{
-				CollectionName: collectionName,
-				IndexKeys:      indexKeys,
-			}
-
-			collections = append(collections, collection)
-
-		}
-
-	}
-
-	db.CreateCollections(collections)
+	db.CreateCollections(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
 	c.JSON(http.StatusCreated, gin.H{"data": "collection created successfully"})
 }

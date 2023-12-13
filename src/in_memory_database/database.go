@@ -29,7 +29,6 @@ func (db *Database) ClearDatabase() {
 
 func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Collection {
 	var collections []*Collection = make([]*Collection, 0)
-
 	for _, collectionInput := range collectionsInput {
 		if IsCollectionExists := db.GetCollection(collectionInput.CollectionName); IsCollectionExists == nil {
 			collection := CreateCollection(collectionInput)

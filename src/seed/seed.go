@@ -10,13 +10,6 @@ import (
 func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 	testDBName := "test"
 
-	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
-		fmt.Printf("\nSeed %s database already exists\n", testDBName)
-		return nil
-	}
-
-	db := gnoSQL.CreateDatabase(testDBName)
-
 	UserCollection := in_memory_database.CollectionInput{
 		CollectionName: "users",
 		IndexKeys:      []string{"city", "pincode"},
@@ -27,9 +20,14 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 		IndexKeys:      []string{"userId", "category"},
 	}
 
-	collections := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
+	collectionsInput := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
 
-	db.CreateCollections(collections)
+	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
+		fmt.Printf("\nSeed %s database already exists\n", testDBName)
+		return nil
+	}
+
+	db := gnoSQL.CreateDatabase(testDBName, collectionsInput)
 
 	type City map[string]interface{}
 	type Pincode map[string]int
