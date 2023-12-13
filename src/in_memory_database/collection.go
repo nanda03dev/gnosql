@@ -93,9 +93,18 @@ func (collection *Collection) Read(id string) Document {
 	return collection.DocumentsMap[id]
 }
 
-func (collection *Collection) Filter(filters []MapInterface) []Document {
+func (collection *Collection) Filter(reqFilter MapInterface) []Document {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
+
+	filters := make([]MapInterface, 0)
+
+	for key, value := range reqFilter {
+		temp := make(MapInterface)
+		temp["key"] = key
+		temp["value"] = value
+		filters = append(filters, temp)
+	}
 
 	filtersWithoutIndex := make([]MapInterface, 0)
 	filtersWithIndex := make([]MapInterface, 0)
@@ -113,6 +122,7 @@ outerLoop:
 
 	var filteredIds DocumentIds
 
+	// if filter have index keys, first filter ids based on
 	if len(filtersWithIndex) > 0 {
 		filteredIds = collection.filterWithIndex(filtersWithIndex)
 	} else {

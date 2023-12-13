@@ -318,7 +318,7 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 		return
 	}
 
-	var value []in_memory_database.MapInterface
+	var value in_memory_database.MapInterface
 
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
