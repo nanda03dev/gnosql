@@ -10,6 +10,31 @@ import (
 )
 
 func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	// Middleware to capture DatabaseName and store it in the context
+	router.Use(func(c *gin.Context) {
+		DatabaseName := c.Param("DatabaseName")
+		CollectionName := c.Param("CollectionName")
+
+		if len(DatabaseName) > 0 {
+			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+
+			if db == nil {
+				c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
+				return
+			}
+
+			if len(CollectionName) > 0 {
+				var collection *in_memory_database.Collection = db.GetCollection(CollectionName)
+				if collection == nil {
+					c.JSON(http.StatusBadRequest, gin.H{"message": "collectionq not found"})
+					return
+				}
+
+			}
+		}
+		c.Next()
+	})
+
 	SeedRoute(router, gnoSQL)
 	DatabaseRoutes(router, gnoSQL)
 	CollectionRoutes(router, gnoSQL)
@@ -35,92 +60,102 @@ func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	path := "/database"
-	router.POST(path+"/add", func(c *gin.Context) {
-		handler.CreateDatabase(c, gnoSQL)
-	})
 
-	router.POST(path+"/delete", func(c *gin.Context) {
-		handler.DeleteDatabase(c, gnoSQL)
-	})
+	DatabaseRoutesGroup := router.Group(path)
+	{
+		DatabaseRoutesGroup.POST("/add", func(c *gin.Context) {
+			handler.CreateDatabase(c, gnoSQL)
+		})
 
-	router.GET(path+"/get-all", func(c *gin.Context) {
-		handler.GetAllDatabases(c, gnoSQL)
-	})
+		DatabaseRoutesGroup.POST("/delete", func(c *gin.Context) {
+			handler.DeleteDatabase(c, gnoSQL)
+		})
 
-	router.GET(path+"/load-to-disk", func(c *gin.Context) {
-		handler.LoadDatabaseToDisk(c, gnoSQL)
-	})
+		DatabaseRoutesGroup.GET("/get-all", func(c *gin.Context) {
+			handler.GetAllDatabases(c, gnoSQL)
+		})
 
+		DatabaseRoutesGroup.GET("/load-to-disk", func(c *gin.Context) {
+			handler.LoadDatabaseToDisk(c, gnoSQL)
+		})
+
+	}
 }
 
 func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 	path := "/collection/:DatabaseName"
 
-	router.POST(path+"/add", func(c *gin.Context) {
-		DatabaseName := c.Param("DatabaseName")
-		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+	CollectionRoutesGroup := router.Group(path)
+	{
+		CollectionRoutesGroup.POST("/add", func(c *gin.Context) {
+			DatabaseName := c.Param("DatabaseName")
+			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
 
-		handler.CreateCollection(c, db)
-	})
+			handler.CreateCollection(c, db)
+		})
 
-	router.DELETE(path+"/delete", func(c *gin.Context) {
-		DatabaseName := c.Param("DatabaseName")
-		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
-		handler.DeleteCollection(c, db)
-	})
+		CollectionRoutesGroup.DELETE("/delete", func(c *gin.Context) {
+			DatabaseName := c.Param("DatabaseName")
+			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			handler.DeleteCollection(c, db)
+		})
 
-	router.GET(path+"/get-all", func(c *gin.Context) {
-		DatabaseName := c.Param("DatabaseName")
-		var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
-		handler.GetAllCollections(c, db)
-	})
+		CollectionRoutesGroup.GET("/get-all", func(c *gin.Context) {
+			DatabaseName := c.Param("DatabaseName")
+			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			handler.GetAllCollections(c, db)
+		})
 
-	// Get collection stats
-	router.GET(path+"/:CollectionName/stats", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.CollectionStats(c, db, collection)
-	})
+		// Get collection stats
+		CollectionRoutesGroup.GET("/:CollectionName/stats", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.CollectionStats(c, db, collection)
+		})
+	}
 
 }
 
 func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	path := "/document/:DatabaseName/:CollectionName"
 
-	// Create
-	router.POST(path, func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.CreateDocument(c, db, collection)
-	})
+	DocumentRoutesGroup := router.Group(path)
+	{
+		// Create
+		DocumentRoutesGroup.POST("/", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.CreateDocument(c, db, collection)
+		})
 
-	// Read
-	router.GET(path+"/:id", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.ReadDocument(c, db, collection)
-	})
+		// Read
+		DocumentRoutesGroup.GET("/:id", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.ReadDocument(c, db, collection)
+		})
 
-	// Read by index
-	router.POST(path+"/filter", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.FilterDocument(c, db, collection)
-	})
+		// Read by index
+		DocumentRoutesGroup.POST("/filter", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.FilterDocument(c, db, collection)
+		})
 
-	// Update
-	router.PUT(path+"/:id", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.UpdateDocument(c, db, collection)
-	})
+		// Update
+		DocumentRoutesGroup.PUT("/:id", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.UpdateDocument(c, db, collection)
+		})
 
-	// Delete
-	router.DELETE(path+"/:id", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.DeleteDocument(c, db, collection)
-	})
+		// Delete
+		DocumentRoutesGroup.DELETE("/:id", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.DeleteDocument(c, db, collection)
+		})
 
-	// Get all data
-	router.GET(path+"/all-data", func(c *gin.Context) {
-		db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-		handler.ReadAllDocument(c, db, collection)
-	})
+		// Get all data
+		DocumentRoutesGroup.GET("/all-data", func(c *gin.Context) {
+			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
+			handler.ReadAllDocument(c, db, collection)
+		})
+	}
 
 }

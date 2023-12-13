@@ -104,7 +104,6 @@ func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
 
 func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
 	for _, database := range gnoSQL.Databases {
-		println("database.DatabaseName ", database.DatabaseName)
 		if database.DatabaseName == databaseName {
 			return database
 		}

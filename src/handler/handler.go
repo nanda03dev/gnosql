@@ -214,16 +214,6 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /collection/{databaseName}/{collectionName}/stats [get]
 func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
-
 	// Serialize data to JSON
 	responseData, _ := json.Marshal(collection.Stats())
 
@@ -242,16 +232,6 @@ func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/ [post]
 func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
 
 	var value map[string]interface{}
 	if err := c.BindJSON(&value); err != nil {
@@ -276,16 +256,6 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Router       /document/{databaseName}/{collectionName}/{id} [get]
 func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
-
 	var value map[string]interface{}
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -308,15 +278,6 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/filter [post]
 func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
 
 	var value in_memory_database.MapInterface
 
@@ -342,15 +303,6 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [put]
 func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
 
 	id := c.Param("id")
 	var value map[string]interface{}
@@ -379,15 +331,6 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [delete]
 func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
 
 	id := c.Param("id")
 	if err := collection.Delete(id); err != nil {
@@ -407,15 +350,6 @@ func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/all-data [get]
 func ReadAllDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
-
-	if collection == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-		return
-	}
 
 	// Fetch all data from the database
 	allData := collection.GetAllData()

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type Config map[string]interface{}
+type Config MapInterface
 
 type Database struct {
 	DatabaseName         string        `json:"DatabaseName"`
