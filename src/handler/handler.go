@@ -318,7 +318,7 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 		return
 	}
 
-	var value []in_memory_database.GenericKeyValue
+	var value []in_memory_database.MapInterface
 
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -361,6 +361,10 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	result := collection.Update(id, value)
 
+	if result == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "document not found"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 

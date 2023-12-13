@@ -76,7 +76,7 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 		user["pincode"] = strconv.Itoa(pincode)
 
 		userInstance := db.GetCollection(UserCollection.CollectionName)
-		userResult := userInstance.Create(user).(in_memory_database.Document)
+		userResult := userInstance.Create(user)
 
 		userId := userResult["id"]
 
