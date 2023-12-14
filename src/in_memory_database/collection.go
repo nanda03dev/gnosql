@@ -19,13 +19,13 @@ type IndexMap map[string]IndexIdsmap //  Ex: { city :{ chennai: {id1: ok , ids2:
 type IndexIdsmap map[string]MapString // Ex: { chennai: {id1: ok , ids2: ok}}
 
 type Collection struct {
-	CollectionName string   `json:"CollectionName"`
-	IsDeleted      bool     `json:"IsDeleted"`
-	IndexMap       IndexMap `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys      []string `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	mu             sync.RWMutex
+	CollectionName string       `json:"CollectionName"`
+	IsDeleted      bool         `json:"IsDeleted"`
+	IndexMap       IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys      []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap   DocumentsMap `json:"DocumentsMap"`
 	DocumentIds    DocumentIds  `json:"DocumentIds"`
+	mu             sync.RWMutex
 }
 
 type CollectionInput struct {

@@ -26,7 +26,7 @@ func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 			if len(CollectionName) > 0 {
 				var collection *in_memory_database.Collection = db.GetCollection(CollectionName)
 				if collection == nil {
-					c.JSON(http.StatusBadRequest, gin.H{"message": "collectionq not found"})
+					c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
 					return
 				}
 

@@ -97,7 +97,7 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	gnoSQL.WriteAllDatabases()
+	go gnoSQL.WriteAllDatabases()
 	c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
 }
 
@@ -111,11 +111,6 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "collection already exists"
 // @Router       /collection/{databaseName}/add [post]
 func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
-
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
 
 	var CollectionsInterface []interface{}
 
@@ -139,10 +134,6 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Success      400 "Unexpected error while delete collection"
 // @Router       /collection/{databaseName}/delete [post]
 func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
 
 	var value map[string][]string
 
@@ -168,10 +159,6 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Success      200 {array} string
 // @Router       /collection/{databaseName}/get-all [get]
 func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-		return
-	}
 
 	// Fetch all data from the database
 	allCollections := db.Collections
