@@ -76,7 +76,7 @@ func (collection *Collection) Create(value Document) Document {
 
 	var document Document = value
 	document["id"] = uniqueUuid
-	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid)
+	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
 
 	collection.DocumentsMap[uniqueUuid] = document
 

@@ -1,7 +1,6 @@
 package in_memory_database
 
 import (
-	"encoding/json"
 	"fmt"
 	"gnosql/src/utils"
 	"os"
@@ -69,15 +68,33 @@ func (db *Database) GetCollection(collectionName string) *Collection {
 	return nil
 }
 
-func (db *Database) SaveToFile() error {
+// func (db *Database) SaveToFile() error {
+// 	fmt.Printf("\n Writing to database : %s to disk \n", db.DatabaseName)
+
+// 	data, err := json.Marshal(db)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return os.WriteFile(db.DatabaseFileFullPath, data, 0644)
+// }
+
+func (db *Database) SaveToFile() {
 	fmt.Printf("\n Writing to database : %s to disk \n", db.DatabaseName)
 
-	data, err := json.Marshal(db)
+	// Convert struct to gob
+	gobData, err := utils.EncodeGob(db)
+
 	if err != nil {
-		return err
+		fmt.Println("GOB encoding error:", err)
 	}
 
-	return os.WriteFile(db.DatabaseFileFullPath, data, 0644)
+	// Save gob to file
+	err = utils.SaveToFile(db.DatabaseFileFullPath, gobData)
+	if err != nil {
+		fmt.Println("Error saving GOB to file:", err)
+	}
+	fmt.Println("GOB data saved to data.gob")
 }
 
 func (db *Database) StartTimerToSaveFile() {
@@ -86,24 +103,46 @@ func (db *Database) StartTimerToSaveFile() {
 	}
 }
 
-func ReadDatabaseJSONFile(filePath string) (Database, error) {
-	var jsonData Database
+// func ReadDatabaseJsonFile(filePath string) (Database, error) {
+// 	var jsonData Database
+
+// 	// Read the Databse JSON file
+// 	fileData, err := os.ReadFile(filePath)
+
+// 	if err != nil {
+// 		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
+// 		return jsonData, err
+// 	}
+
+// 	err = json.Unmarshal(fileData, &jsonData)
+
+// 	if err != nil {
+// 		fmt.Printf("\n Datebase file %s Unmarshall , Error %v", filePath, err)
+
+// 		return jsonData, err
+// 	}
+
+// 	return jsonData, nil
+// }
+
+func ReadDatabaseGobFile(filePath string) (Database, error) {
+	var gobData Database
 
 	// Read the Databse JSON file
 	fileData, err := os.ReadFile(filePath)
 
 	if err != nil {
 		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
-		return jsonData, err
+		return gobData, err
 	}
 
-	err = json.Unmarshal(fileData, &jsonData)
+	err = utils.DecodeGob(fileData, &gobData)
 
 	if err != nil {
-		fmt.Printf("\n Datebase file %s Unmarshall , Error %v", filePath, err)
+		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)
 
-		return jsonData, err
+		return gobData, err
 	}
 
-	return jsonData, nil
+	return gobData, nil
 }

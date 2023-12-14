@@ -1,11 +1,14 @@
 package utils
 
 import (
-	"github.com/google/uuid"
+	"bytes"
+	"encoding/gob"
 	"os"
 	"os/user"
 	"path/filepath"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func DeleteElement(array []string, elementToDelete string) []string {
@@ -108,7 +111,7 @@ func ReadFile(filePath string) ([]byte, error) {
 }
 
 func GetDatabaseFileName(databaseName string) string {
-	return databaseName + "-db.json"
+	return databaseName + "-db.gob"
 }
 
 func GetDatabaseFilePath(fileName string) string {
@@ -123,4 +126,25 @@ func DeleteFile(filePath string) bool {
 	}
 
 	return true
+}
+
+func EncodeGob(data interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(data)
+	return buf.Bytes(), err
+}
+
+func DecodeGob(data []byte, target interface{}) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	return dec.Decode(target)
+}
+
+func SaveToFile(filename string, data []byte) error {
+	return os.WriteFile(filename, data, 0644)
+}
+
+func ReadFromFile(filename string) ([]byte, error) {
+	return os.ReadFile(filename)
 }

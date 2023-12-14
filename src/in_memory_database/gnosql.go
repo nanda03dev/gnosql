@@ -55,7 +55,7 @@ func (gnoSQL *GnoSQL) LoadDatabase(dbValues Database) *Database {
 		Config:               dbValues.Config,
 	}
 
-	go db.StartTimerToSaveFile()
+	// go db.StartTimerToSaveFile()
 
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
 
@@ -83,15 +83,14 @@ func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
 	var databases = make([]*Database, 0)
 
 	fileNames, err := utils.ReadFileNamesInDirectory(utils.GNOSQLFULLPATH)
-
 	if err != nil {
 		return databases
 	}
 
 	for _, fileName := range fileNames {
-		if strings.Contains(fileName, "-db.json") {
+		if strings.Contains(fileName, "-db.gob") {
 			println("Loading database ", fileName)
-			if databaseJson, err := ReadDatabaseJSONFile(fileName); err == nil {
+			if databaseJson, err := ReadDatabaseGobFile(fileName); err == nil {
 				if !databaseJson.IsDeleted {
 					var db *Database = gnoSQL.LoadDatabase(databaseJson)
 					databases = append(databases, db)
