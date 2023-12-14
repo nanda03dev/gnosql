@@ -148,7 +148,7 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": "successfully deleted"})
+	c.JSON(http.StatusOK, gin.H{"data": "successfully deleted"})
 }
 
 // @Summary      Get all collections
@@ -234,7 +234,7 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 
 	result := collection.Create(value)
 
-	c.JSON(http.StatusCreated, gin.H{"data": result})
+	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
 // @Summary      Filter document
@@ -258,7 +258,7 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	result := collection.Filter(value)
 
-	c.JSON(http.StatusCreated, gin.H{"data": result})
+	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
 // @Summary      Update document
