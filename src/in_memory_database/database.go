@@ -72,7 +72,7 @@ func (db *Database) GetCollection(collectionName string) *Collection {
 func (db *Database) SaveToFile() error {
 	fmt.Printf("\n Writing to database : %s to disk \n", db.DatabaseName)
 
-	data, err := json.MarshalIndent(db, "", "  ")
+	data, err := json.Marshal(db)
 	if err != nil {
 		return err
 	}
