@@ -3,12 +3,11 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/google/uuid"
 	"os"
 	"os/user"
 	"path/filepath"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 func DeleteElement(array []string, elementToDelete string) []string {
@@ -52,15 +51,17 @@ func CreateDatabaseFolder() bool {
 	return false
 }
 
-func CreateFolder(folderName string) (string, error) {
-	usr, err := user.Current()
+func CreateFolder(nestedFolderPath string) (string, error) {
+	_, err := user.Current()
 	if err != nil {
 		println("Error while getting user directory %v", err)
 		return "", err
 	}
 
-	// Construct the full path to the nested folders in the user's home directory
-	nestedFolderPath := filepath.Join(usr.HomeDir, folderName)
+	// // Construct the full path to the nested folders in the user's home directory
+	// nestedFolderPath := filepath.Join(usr.HomeDir, folderName)
+
+	println("nestedFolderPath ", nestedFolderPath)
 
 	// Check if the nested folders already exist
 	if _, err := os.Stat(nestedFolderPath); os.IsNotExist(err) {
@@ -68,7 +69,7 @@ func CreateFolder(folderName string) (string, error) {
 		// Nested folders do not exist, create them
 		err := os.MkdirAll(nestedFolderPath, 0755) // 0755 is the permission mode for the new folders
 		if err != nil {
-			println("Error while create %s directory %v", folderName, err)
+			println("Error while create %s directory %v", nestedFolderPath, err)
 			return "", err
 		}
 		println("gnosql database folder created successfully")
@@ -77,6 +78,33 @@ func CreateFolder(folderName string) (string, error) {
 	}
 
 	return nestedFolderPath, nil
+}
+
+func ReadFoldersInDirectory(directoryPath string) ([]string, error) {
+	var fileNames []string
+
+	// Read the directory
+	files, err := os.ReadDir(directoryPath)
+	if err != nil {
+		println("database file names reading, Error %v", err)
+		return nil, err
+	}
+
+	// Iterate over the files
+	for _, file := range files {
+		// Check if the entry is a file (not a directory)
+		if file.IsDir() {
+			filePath := filepath.Join(directoryPath, file.Name())
+
+			// Append the file path to the slice
+			fileNames = append(fileNames, filePath)
+		}
+
+		// Construct the full path to the file
+
+	}
+
+	return fileNames, nil
 }
 
 func ReadFileNamesInDirectory(directoryPath string) ([]string, error) {
@@ -113,9 +141,20 @@ func ReadFile(filePath string) ([]byte, error) {
 func GetDatabaseFileName(databaseName string) string {
 	return databaseName + "-db.gob"
 }
+func GetDatabaseFolderPath(databaseName string) string {
+	return filepath.Join(GNOSQLFULLPATH, databaseName)
+}
 
-func GetDatabaseFilePath(fileName string) string {
-	return filepath.Join(GNOSQLFULLPATH, fileName)
+func GetDatabaseFilePath(databaseName, fileName string) string {
+	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
+}
+
+func GetCollectionFileName(collectionName string) string {
+	return collectionName + "-collection.gob"
+}
+
+func GetCollectionFilePath(databaseName string, fileName string) string {
+	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
 }
 
 func DeleteFile(filePath string) bool {

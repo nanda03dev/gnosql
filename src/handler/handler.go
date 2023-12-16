@@ -225,15 +225,8 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [get]
 func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-
-	var value map[string]interface{}
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	result := collection.Create(value)
-
+	id := c.Param("id")
+	result := collection.Read(id)
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
@@ -248,7 +241,6 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/filter [post]
 func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-
 	var value in_memory_database.MapInterface
 
 	if err := c.BindJSON(&value); err != nil {
@@ -273,7 +265,6 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [put]
 func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-
 	id := c.Param("id")
 	var value map[string]interface{}
 	if err := c.BindJSON(&value); err != nil {

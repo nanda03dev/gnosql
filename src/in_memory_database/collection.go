@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"gnosql/src/utils"
+	"os"
 	"slices"
 	"sync"
 )
@@ -19,13 +20,26 @@ type IndexMap map[string]IndexIdsmap //  Ex: { city :{ chennai: {id1: ok , ids2:
 type IndexIdsmap map[string]MapString // Ex: { chennai: {id1: ok , ids2: ok}}
 
 type Collection struct {
-	CollectionName string       `json:"CollectionName"`
-	IsDeleted      bool         `json:"IsDeleted"`
-	IndexMap       IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys      []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap   DocumentsMap `json:"DocumentsMap"`
-	DocumentIds    DocumentIds  `json:"DocumentIds"`
-	mu             sync.RWMutex
+	CollectionName     string       `json:"CollectionName"`
+	IsDeleted          bool         `json:"IsDeleted"`
+	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
+	DocumentIds        DocumentIds  `json:"DocumentIds"`
+	CollectionFileName string       `json:"CollectionFileName"`
+	CollectionFullPath string       `json:"CollectionFullPath"`
+	mu                 sync.RWMutex
+}
+
+type CollectionFileStruct struct {
+	CollectionName     string       `json:"CollectionName"`
+	IsDeleted          bool         `json:"IsDeleted"`
+	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
+	DocumentIds        DocumentIds  `json:"DocumentIds"`
+	CollectionFileName string       `json:"CollectionFileName"`
+	CollectionFullPath string       `json:"CollectionFullPath"`
 }
 
 type CollectionInput struct {
@@ -36,30 +50,43 @@ type CollectionInput struct {
 	IndexKeys []string
 }
 
-func CreateCollection(collectionInput CollectionInput) *Collection {
-	return &Collection{
-		CollectionName: collectionInput.CollectionName,
-		IndexKeys:      collectionInput.IndexKeys,
-		DocumentsMap:   make(DocumentsMap),
-		DocumentIds:    make(DocumentIds, 0),
-		IndexMap:       make(IndexMap),
-		mu:             sync.RWMutex{},
-		IsDeleted:      false,
-	}
+func CreateCollection(collectionInput CollectionInput, db *Database) *Collection {
+
+	fileName := utils.GetCollectionFileName(collectionInput.CollectionName)
+	fullPath := utils.GetCollectionFilePath(db.DatabaseName, fileName)
+
+	collection :=
+		&Collection{
+			CollectionName:     collectionInput.CollectionName,
+			IndexKeys:          collectionInput.IndexKeys,
+			DocumentsMap:       make(DocumentsMap),
+			DocumentIds:        make(DocumentIds, 0),
+			IndexMap:           make(IndexMap),
+			mu:                 sync.RWMutex{},
+			CollectionFileName: fileName,
+			CollectionFullPath: fullPath,
+			IsDeleted:          false,
+		}
+
+	collection.SaveCollectionToFile()
+
+	return collection
 }
 
-func LoadCollections(collections []*Collection) []*Collection {
+func LoadCollections(collections []CollectionFileStruct) []*Collection {
 	var collectionInstances = make([]*Collection, 0)
 
 	for _, collection := range collections {
 		collectionInstance := &Collection{
-			CollectionName: collection.CollectionName,
-			IndexKeys:      collection.IndexKeys,
-			DocumentsMap:   collection.DocumentsMap,
-			DocumentIds:    collection.DocumentIds,
-			IndexMap:       collection.IndexMap,
-			mu:             sync.RWMutex{},
-			IsDeleted:      collection.IsDeleted,
+			CollectionName:     collection.CollectionName,
+			IndexKeys:          collection.IndexKeys,
+			DocumentsMap:       collection.DocumentsMap,
+			DocumentIds:        collection.DocumentIds,
+			IndexMap:           collection.IndexMap,
+			CollectionFileName: collection.CollectionFileName,
+			CollectionFullPath: collection.CollectionFullPath,
+			mu:                 sync.RWMutex{},
+			IsDeleted:          collection.IsDeleted,
 		}
 
 		collectionInstances = append(collectionInstances, collectionInstance)
@@ -395,6 +422,35 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, un
 	}
 }
 
+func (collection *Collection) SaveCollectionToFile() {
+	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
+
+	temp := CollectionFileStruct{
+		CollectionName:     collection.CollectionName,
+		IndexKeys:          collection.IndexKeys,
+		DocumentsMap:       collection.DocumentsMap,
+		DocumentIds:        collection.DocumentIds,
+		IndexMap:           collection.IndexMap,
+		CollectionFileName: collection.CollectionFileName,
+		CollectionFullPath: collection.CollectionFullPath,
+		IsDeleted:          collection.IsDeleted,
+	}
+
+	gobData, err := utils.EncodeGob(temp)
+
+	if err != nil {
+		fmt.Println("GOB encoding error:", err)
+	}
+
+	err = utils.SaveToFile(collection.CollectionFullPath, gobData)
+
+	if err != nil {
+		fmt.Println("Error saving GOB to file:", err)
+	}
+
+	fmt.Println("GOB data saved to ", collection.CollectionName)
+}
+
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
 	var collectionsInput []CollectionInput
 
@@ -415,4 +471,25 @@ func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionI
 		}
 	}
 	return collectionsInput
+}
+
+func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
+	var gobData CollectionFileStruct
+
+	fileData, err := os.ReadFile(filePath)
+
+	if err != nil {
+		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
+		return gobData, err
+	}
+
+	err = utils.DecodeGob(fileData, &gobData)
+
+	if err != nil {
+		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)
+
+		return gobData, err
+	}
+
+	return gobData, nil
 }

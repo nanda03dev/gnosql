@@ -1,6 +1,7 @@
 package in_memory_database
 
 import (
+	"fmt"
 	"gnosql/src/utils"
 	"strings"
 )
@@ -24,38 +25,37 @@ func (gnoSQL *GnoSQL) CreateDatabase(databaseName string, collectionsInput []Col
 	Config := make(Config)
 	Config["version"] = 1
 
+	databasePath := utils.GetDatabaseFolderPath(databaseName)
 	fileName := utils.GetDatabaseFileName(databaseName)
-	filePath := utils.GetDatabaseFilePath(fileName)
+	filePath := utils.GetDatabaseFilePath(databaseName, fileName)
 
 	db := &Database{
 		DatabaseName:         databaseName,
 		DatabaseFileName:     fileName,
 		DatabaseFileFullPath: filePath,
+		DatabaseFolderPath:   databasePath,
 		Collections:          make([]*Collection, 0),
 		Config:               Config,
 		IsDeleted:            false,
 	}
 
+	utils.CreateFolder(databasePath)
+	db.SaveDatabaseToFile()
 	db.CreateCollections(collectionsInput)
-
-	db.SaveToFile()
-
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
 
 	return db
 }
 
-func (gnoSQL *GnoSQL) LoadDatabase(dbValues Database) *Database {
+func (gnoSQL *GnoSQL) LoadDatabase(dbValues DatabaseFileStruct) *Database {
 
 	db := &Database{
 		DatabaseName:         dbValues.DatabaseName,
 		DatabaseFileName:     dbValues.DatabaseFileName,
 		DatabaseFileFullPath: dbValues.DatabaseFileFullPath,
-		Collections:          LoadCollections(dbValues.Collections),
+		Collections:          make([]*Collection, 0),
 		Config:               dbValues.Config,
 	}
-
-	// go db.StartTimerToSaveFile()
 
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
 
@@ -82,22 +82,50 @@ func (gnoSQL *GnoSQL) DeleteDatabase(db *Database) bool {
 func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
 	var databases = make([]*Database, 0)
 
-	fileNames, err := utils.ReadFileNamesInDirectory(utils.GNOSQLFULLPATH)
+	folders, err := utils.ReadFoldersInDirectory(utils.GNOSQLFULLPATH)
+
 	if err != nil {
+		print("error while reading folders ")
 		return databases
 	}
 
-	for _, fileName := range fileNames {
-		if strings.Contains(fileName, "-db.gob") {
-			println("Loading database ", fileName)
-			if databaseJson, err := ReadDatabaseGobFile(fileName); err == nil {
-				if !databaseJson.IsDeleted {
-					var db *Database = gnoSQL.LoadDatabase(databaseJson)
-					databases = append(databases, db)
+	fmt.Println("Database folders:", fmt.Sprintf("%v", folders))
+
+	for _, eachDatabaseFolder := range folders {
+		fileNames, err := utils.ReadFileNamesInDirectory(eachDatabaseFolder)
+		fmt.Println("database & collections files:", fmt.Sprintf("%v", fileNames))
+
+		if err != nil {
+			return databases
+		}
+
+		var db *Database
+		var collectionsGobData []CollectionFileStruct
+
+		for _, fileName := range fileNames {
+			if strings.Contains(fileName, "-db.gob") {
+				println("Loading database ", fileName)
+				if databaseJson, err := ReadDatabaseGobFile(fileName); err == nil {
+					if !databaseJson.IsDeleted {
+						db = gnoSQL.LoadDatabase(databaseJson)
+						databases = append(databases, db)
+					}
 				}
 			}
-
 		}
+
+		for _, fileName := range fileNames {
+			if strings.Contains(fileName, "-collection.gob") {
+				println("Loading collection ", fileName)
+				if collectionGobData, err := ReadCollectionGobFile(fileName); err == nil {
+					if !collectionGobData.IsDeleted {
+						collectionsGobData = append(collectionsGobData, collectionGobData)
+					}
+				}
+			}
+		}
+
+		db.Collections = LoadCollections(collectionsGobData)
 	}
 
 	return databases
@@ -128,7 +156,11 @@ func (gnoSQL *GnoSQL) GetDatabaseAndCollection(databaseName string, collectionNa
 
 func (gnoSQL *GnoSQL) WriteAllDatabases() {
 	for _, database := range gnoSQL.Databases {
-		database.SaveToFile()
+		database.SaveDatabaseToFile()
+
+		for _, collection := range database.Collections {
+			collection.SaveCollectionToFile()
+		}
 	}
 }
 

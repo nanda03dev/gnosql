@@ -88,7 +88,7 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 
 	}
 	// manually write seed test database to disk
-	go db.SaveToFile()
+	go db.SaveDatabaseToFile()
 
 	return db
 

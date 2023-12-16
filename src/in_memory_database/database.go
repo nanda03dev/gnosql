@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gnosql/src/utils"
 	"os"
-	"time"
 )
 
 type Config MapInterface
@@ -13,13 +12,23 @@ type Database struct {
 	DatabaseName         string        `json:"DatabaseName"`
 	DatabaseFileName     string        `json:"DatabaseFileName"`
 	DatabaseFileFullPath string        `json:"DatabaseFileFullPath"`
+	DatabaseFolderPath   string        `json:"DatabaseFolderPath"`
 	Collections          []*Collection `json:"Collections"`
 	Config               Config        `json:"Config"`
 	IsDeleted            bool          `json:"IsDeleted"`
 }
 
+type DatabaseFileStruct struct {
+	DatabaseName         string `json:"DatabaseName"`
+	DatabaseFileName     string `json:"DatabaseFileName"`
+	DatabaseFileFullPath string `json:"DatabaseFileFullPath"`
+	DatabaseFolderPath   string `json:"DatabaseFolderPath"`
+	Config               Config `json:"Config"`
+	IsDeleted            bool   `json:"IsDeleted"`
+}
+
 func (db *Database) ClearDatabase() {
-	utils.DeleteFile(db.DatabaseFileFullPath)
+	os.RemoveAll(db.DatabaseFolderPath)
 
 	for _, collection := range db.Collections {
 		collection.Clear()
@@ -30,7 +39,7 @@ func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Col
 	var collections []*Collection = make([]*Collection, 0)
 	for _, collectionInput := range collectionsInput {
 		if IsCollectionExists := db.GetCollection(collectionInput.CollectionName); IsCollectionExists == nil {
-			collection := CreateCollection(collectionInput)
+			collection := CreateCollection(collectionInput, db)
 			db.Collections = append(db.Collections, collection)
 			collections = append(collections, collection)
 		}
@@ -68,67 +77,36 @@ func (db *Database) GetCollection(collectionName string) *Collection {
 	return nil
 }
 
-// func (db *Database) SaveToFile() error {
-// 	fmt.Printf("\n Writing to database : %s to disk \n", db.DatabaseName)
-
-// 	data, err := json.Marshal(db)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return os.WriteFile(db.DatabaseFileFullPath, data, 0644)
-// }
-
-func (db *Database) SaveToFile() {
+func (db *Database) SaveDatabaseToFile() {
 	fmt.Printf("\n Writing to database : %s to disk \n", db.DatabaseName)
 
 	// Convert struct to gob
-	gobData, err := utils.EncodeGob(db)
+	temp := DatabaseFileStruct{
+		DatabaseName:         db.DatabaseName,
+		DatabaseFileName:     db.DatabaseFileName,
+		DatabaseFileFullPath: db.DatabaseFileFullPath,
+		Config:               db.Config,
+		IsDeleted:            db.IsDeleted,
+	}
+
+	gobData, err := utils.EncodeGob(temp)
 
 	if err != nil {
 		fmt.Println("GOB encoding error:", err)
 	}
 
-	// Save gob to file
 	err = utils.SaveToFile(db.DatabaseFileFullPath, gobData)
+
 	if err != nil {
 		fmt.Println("Error saving GOB to file:", err)
 	}
-	fmt.Println("GOB data saved to data.gob")
+
+	fmt.Println("GOB data saved to ", db.DatabaseName)
 }
 
-func (db *Database) StartTimerToSaveFile() {
-	for range time.Tick(2 * time.Hour) {
-		go db.SaveToFile()
-	}
-}
+func ReadDatabaseGobFile(filePath string) (DatabaseFileStruct, error) {
+	var gobData DatabaseFileStruct
 
-// func ReadDatabaseJsonFile(filePath string) (Database, error) {
-// 	var jsonData Database
-
-// 	// Read the Databse JSON file
-// 	fileData, err := os.ReadFile(filePath)
-
-// 	if err != nil {
-// 		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
-// 		return jsonData, err
-// 	}
-
-// 	err = json.Unmarshal(fileData, &jsonData)
-
-// 	if err != nil {
-// 		fmt.Printf("\n Datebase file %s Unmarshall , Error %v", filePath, err)
-
-// 		return jsonData, err
-// 	}
-
-// 	return jsonData, nil
-// }
-
-func ReadDatabaseGobFile(filePath string) (Database, error) {
-	var gobData Database
-
-	// Read the Databse JSON file
 	fileData, err := os.ReadFile(filePath)
 
 	if err != nil {
