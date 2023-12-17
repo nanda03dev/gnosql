@@ -7,10 +7,9 @@ import (
 
 var usr, _ = user.Current()
 
-const gnoSQLPath = "gnosql/db/"
+var GNOSQPATH = "gnosql/db/"
 
-var GNOSQLFULLPATH = filepath.Join(usr.HomeDir, gnoSQLPath)
+var GNOSQLFULLPATH = filepath.Join(usr.HomeDir, GNOSQPATH)
 
-const (
-	GNOSQLPATH = gnoSQLPath
-)
+var DBExtension = "-db.gob"
+var CollectionExtension = "-collection.gob"

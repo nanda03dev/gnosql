@@ -42,10 +42,8 @@ func main() {
 	}
 
 	utils.CreateDatabaseFolder()
-
 	var gnoSQL *in_memory_database.GnoSQL = in_memory_database.CreateGnoSQL()
-
-	gnoSQL.LoadAllDatabases()
+	gnoSQL.LoadAllDBs()
 
 	router.RouterInit(ginRouter, gnoSQL)
 

@@ -22,12 +22,12 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 
 	collectionsInput := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
 
-	if dbExists := gnoSQL.GetDatabase(testDBName); dbExists != nil {
+	if dbExists := gnoSQL.GetDB(testDBName); dbExists != nil {
 		fmt.Printf("\nSeed %s database already exists\n", testDBName)
 		return nil
 	}
 
-	db := gnoSQL.CreateDatabase(testDBName, collectionsInput)
+	db := gnoSQL.CreateDB(testDBName, collectionsInput)
 
 	type City map[string]interface{}
 	type Pincode map[string]int
@@ -73,12 +73,12 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 
 		user["pincode"] = strconv.Itoa(pincode)
 
-		userInstance := db.GetCollection(UserCollection.CollectionName)
+		userInstance := db.GetColl(UserCollection.CollectionName)
 		userResult := userInstance.Create(user)
 
 		userId := userResult["id"]
 
-		orderInstance := db.GetCollection(OrderCollection.CollectionName)
+		orderInstance := db.GetColl(OrderCollection.CollectionName)
 		for i := 0; i < 2; i++ {
 			order := make(in_memory_database.Document)
 			order["userId"] = userId

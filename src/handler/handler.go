@@ -2,9 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -30,12 +31,12 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		collectionsInterface = collections.([]interface{})
 	}
 
-	if dbExists := gnoSQL.GetDatabase(databaseName); dbExists != nil {
+	if dbExists := gnoSQL.GetDB(databaseName); dbExists != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Database already exists"})
 		return
 	}
 
-	gnoSQL.CreateDatabase(databaseName, in_memory_database.ConvertToCollectionInputs(collectionsInterface))
+	gnoSQL.CreateDB(databaseName, in_memory_database.ConvertToCollectionInputs(collectionsInterface))
 
 	c.JSON(http.StatusCreated, gin.H{"data": "database created successfully"})
 }
@@ -56,14 +57,14 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	db := gnoSQL.GetDatabase(value["databaseName"].(string))
+	db := gnoSQL.GetDB(value["databaseName"].(string))
 
 	if db == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"data": "Unexpected error while delete database"})
 		return
 	}
 
-	gnoSQL.DeleteDatabase(db)
+	gnoSQL.DeleteDB(db)
 
 	c.JSON(http.StatusOK, gin.H{"data": "database deleted successfully"})
 }
@@ -79,9 +80,7 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	databaseNames := make([]string, 0)
 
 	for _, database := range gnoSQL.Databases {
-		if !database.IsDeleted {
-			databaseNames = append(databaseNames, database.DatabaseName)
-		}
+		databaseNames = append(databaseNames, database.DatabaseName)
 	}
 	// Serialize data to JSON
 	responseData, _ := json.Marshal(databaseNames)
@@ -97,7 +96,7 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	go gnoSQL.WriteAllDatabases()
+	go gnoSQL.WriteAllDBs()
 	c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
 }
 
@@ -119,7 +118,7 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 		return
 	}
 
-	db.CreateCollections(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
+	db.CreateColls(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
 	c.JSON(http.StatusCreated, gin.H{"data": "collection created successfully"})
 }
@@ -144,11 +143,11 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 
 	// var indexKeys = make([]string, 0)
 	if collections, ok := value["collections"]; ok {
-		db.DeleteCollections(collections)
+		db.DeleteColls(collections)
 
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": "successfully deleted"})
+	c.JSON(http.StatusOK, gin.H{"data": "collection successfully deleted"})
 }
 
 // @Summary      Get all collections

@@ -1,12 +1,13 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	_ "gnosql/docs"
 	"gnosql/src/handler"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/seed"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
@@ -16,7 +17,7 @@ func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		CollectionName := c.Param("CollectionName")
 
 		if len(DatabaseName) > 0 {
-			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
 
 			if db == nil {
 				c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
@@ -24,7 +25,7 @@ func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 			}
 
 			if len(CollectionName) > 0 {
-				var collection *in_memory_database.Collection = db.GetCollection(CollectionName)
+				var collection *in_memory_database.Collection = db.GetColl(CollectionName)
 				if collection == nil {
 					c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
 					return
@@ -90,20 +91,20 @@ func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	{
 		CollectionRoutesGroup.POST("/add", func(c *gin.Context) {
 			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
 
 			handler.CreateCollection(c, db)
 		})
 
 		CollectionRoutesGroup.DELETE("/delete", func(c *gin.Context) {
 			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
 			handler.DeleteCollection(c, db)
 		})
 
 		CollectionRoutesGroup.GET("/get-all", func(c *gin.Context) {
 			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDatabase(DatabaseName)
+			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
 			handler.GetAllCollections(c, db)
 		})
 

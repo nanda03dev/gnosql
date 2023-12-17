@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"github.com/google/uuid"
 	"os"
-	"os/user"
 	"path/filepath"
 	"time"
 )
@@ -45,22 +44,13 @@ func ExtractTimestampFromUUID(uuidStr string) time.Time {
 }
 
 func CreateDatabaseFolder() bool {
-	if _, err := CreateFolder(GNOSQLPATH); err == nil {
+	if _, err := CreateFolder(GNOSQLFULLPATH); err == nil {
 		return true
 	}
 	return false
 }
 
 func CreateFolder(nestedFolderPath string) (string, error) {
-	_, err := user.Current()
-	if err != nil {
-		println("Error while getting user directory %v", err)
-		return "", err
-	}
-
-	// // Construct the full path to the nested folders in the user's home directory
-	// nestedFolderPath := filepath.Join(usr.HomeDir, folderName)
-
 	println("nestedFolderPath ", nestedFolderPath)
 
 	// Check if the nested folders already exist
@@ -139,7 +129,7 @@ func ReadFile(filePath string) ([]byte, error) {
 }
 
 func GetDatabaseFileName(databaseName string) string {
-	return databaseName + "-db.gob"
+	return databaseName + DBExtension
 }
 func GetDatabaseFolderPath(databaseName string) string {
 	return filepath.Join(GNOSQLFULLPATH, databaseName)
@@ -150,7 +140,7 @@ func GetDatabaseFilePath(databaseName, fileName string) string {
 }
 
 func GetCollectionFileName(collectionName string) string {
-	return collectionName + "-collection.gob"
+	return collectionName + CollectionExtension
 }
 
 func GetCollectionFilePath(databaseName string, fileName string) string {

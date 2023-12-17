@@ -14,63 +14,29 @@ func CreateGnoSQL() *GnoSQL {
 	gnoSQL := &GnoSQL{
 		Databases: make([]*Database, 0),
 	}
-
-	// TODO function added, not tested, keeping this for future use
-	// runtime.SetFinalizer(gnoSQL, cleanupFunction)
-
 	return gnoSQL
 }
 
-func (gnoSQL *GnoSQL) CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Database {
-	Config := make(Config)
-	Config["version"] = 1
-
-	databasePath := utils.GetDatabaseFolderPath(databaseName)
-	fileName := utils.GetDatabaseFileName(databaseName)
-	filePath := utils.GetDatabaseFilePath(databaseName, fileName)
-
-	db := &Database{
-		DatabaseName:         databaseName,
-		DatabaseFileName:     fileName,
-		DatabaseFileFullPath: filePath,
-		DatabaseFolderPath:   databasePath,
-		Collections:          make([]*Collection, 0),
-		Config:               Config,
-		IsDeleted:            false,
-	}
-
-	utils.CreateFolder(databasePath)
-	db.SaveDatabaseToFile()
-	db.CreateCollections(collectionsInput)
+func (gnoSQL *GnoSQL) CreateDB(databaseName string, collectionsInput []CollectionInput) *Database {
+	var db *Database = CreateDatabase(databaseName, collectionsInput)
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
-
 	return db
 }
 
-func (gnoSQL *GnoSQL) LoadDatabase(dbValues DatabaseFileStruct) *Database {
-
-	db := &Database{
-		DatabaseName:         dbValues.DatabaseName,
-		DatabaseFileName:     dbValues.DatabaseFileName,
-		DatabaseFileFullPath: dbValues.DatabaseFileFullPath,
-		Collections:          make([]*Collection, 0),
-		Config:               dbValues.Config,
-	}
-
+func (gnoSQL *GnoSQL) LoadDB(database DatabaseFileStruct) *Database {
+	var db *Database = LoadDatabase(database)
 	gnoSQL.Databases = append(gnoSQL.Databases, db)
-
 	return db
 }
 
-func (gnoSQL *GnoSQL) DeleteDatabase(db *Database) bool {
+func (gnoSQL *GnoSQL) DeleteDB(db *Database) bool {
 	var databases []*Database = make([]*Database, 0)
 
 	for _, database := range gnoSQL.Databases {
 		if database.DatabaseName != db.DatabaseName {
-			// database.IsDeleted = true
 			databases = append(databases, database)
 		} else {
-			database.ClearDatabase()
+			database.DeleteDatabase()
 		}
 	}
 
@@ -79,59 +45,47 @@ func (gnoSQL *GnoSQL) DeleteDatabase(db *Database) bool {
 	return true
 }
 
-func (gnoSQL *GnoSQL) LoadAllDatabases() []*Database {
-	var databases = make([]*Database, 0)
-
-	folders, err := utils.ReadFoldersInDirectory(utils.GNOSQLFULLPATH)
-
+func (gnoSQL *GnoSQL) LoadAllDBs() {
+	// Read all database folder from gnosqlpath
+	databaseFolders, err := utils.ReadFoldersInDirectory(utils.GNOSQLFULLPATH)
 	if err != nil {
-		print("error while reading folders ")
-		return databases
+		fmt.Println("Error while reading database folders", fmt.Sprintf("%v", err))
 	}
+	fmt.Println("Database folders:", fmt.Sprintf("%v", databaseFolders))
 
-	fmt.Println("Database folders:", fmt.Sprintf("%v", folders))
-
-	for _, eachDatabaseFolder := range folders {
+	// Read database and all colelctions one by one
+	for _, eachDatabaseFolder := range databaseFolders {
 		fileNames, err := utils.ReadFileNamesInDirectory(eachDatabaseFolder)
+		if err != nil {
+			fmt.Println("Error while reading collection files", fmt.Sprintf("%v", err))
+		}
 		fmt.Println("database & collections files:", fmt.Sprintf("%v", fileNames))
 
-		if err != nil {
-			return databases
-		}
-
 		var db *Database
-		var collectionsGobData []CollectionFileStruct
+		var collectionsGob []CollectionFileStruct
 
+		// filter fileName "-db.gob", "-collection.gob"
 		for _, fileName := range fileNames {
-			if strings.Contains(fileName, "-db.gob") {
+			if strings.Contains(fileName, utils.DBExtension) {
 				println("Loading database ", fileName)
-				if databaseJson, err := ReadDatabaseGobFile(fileName); err == nil {
-					if !databaseJson.IsDeleted {
-						db = gnoSQL.LoadDatabase(databaseJson)
-						databases = append(databases, db)
-					}
+				if databaseGob, err := ReadDatabaseGobFile(fileName); err == nil {
+					db = gnoSQL.LoadDB(databaseGob)
 				}
 			}
-		}
-
-		for _, fileName := range fileNames {
-			if strings.Contains(fileName, "-collection.gob") {
+			if strings.Contains(fileName, utils.CollectionExtension) {
 				println("Loading collection ", fileName)
-				if collectionGobData, err := ReadCollectionGobFile(fileName); err == nil {
-					if !collectionGobData.IsDeleted {
-						collectionsGobData = append(collectionsGobData, collectionGobData)
-					}
+				if collectionGob, err := ReadCollectionGobFile(fileName); err == nil {
+					collectionsGob = append(collectionsGob, collectionGob)
 				}
 			}
 		}
 
-		db.Collections = LoadCollections(collectionsGobData)
+		db.Collections = db.LoadColls(collectionsGob)
 	}
 
-	return databases
 }
 
-func (gnoSQL *GnoSQL) GetDatabase(databaseName string) *Database {
+func (gnoSQL *GnoSQL) GetDB(databaseName string) *Database {
 	for _, database := range gnoSQL.Databases {
 		if database.DatabaseName == databaseName {
 			return database
@@ -154,7 +108,7 @@ func (gnoSQL *GnoSQL) GetDatabaseAndCollection(databaseName string, collectionNa
 	return nil, nil
 }
 
-func (gnoSQL *GnoSQL) WriteAllDatabases() {
+func (gnoSQL *GnoSQL) WriteAllDBs() {
 	for _, database := range gnoSQL.Databases {
 		database.SaveDatabaseToFile()
 
@@ -163,10 +117,3 @@ func (gnoSQL *GnoSQL) WriteAllDatabases() {
 		}
 	}
 }
-
-// // Function to be executed before the object is deleted
-// func cleanupFunction(gnoSQL *GnoSQL) {
-// 	println(" cleanupFunction called once its garbage collected ", gnoSQL.Databases)
-// 	// Add your cleanup logic here
-// 	// This function will be executed when the object is garbage collected
-// }

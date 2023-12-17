@@ -15,7 +15,6 @@ type Database struct {
 	DatabaseFolderPath   string        `json:"DatabaseFolderPath"`
 	Collections          []*Collection `json:"Collections"`
 	Config               Config        `json:"Config"`
-	IsDeleted            bool          `json:"IsDeleted"`
 }
 
 type DatabaseFileStruct struct {
@@ -24,21 +23,57 @@ type DatabaseFileStruct struct {
 	DatabaseFileFullPath string `json:"DatabaseFileFullPath"`
 	DatabaseFolderPath   string `json:"DatabaseFolderPath"`
 	Config               Config `json:"Config"`
-	IsDeleted            bool   `json:"IsDeleted"`
 }
 
-func (db *Database) ClearDatabase() {
-	os.RemoveAll(db.DatabaseFolderPath)
+func CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Database {
+	Config := make(Config)
+	Config["version"] = 1
 
-	for _, collection := range db.Collections {
-		collection.Clear()
+	databasePath := utils.GetDatabaseFolderPath(databaseName)
+	fileName := utils.GetDatabaseFileName(databaseName)
+	filePath := utils.GetDatabaseFilePath(databaseName, fileName)
+
+	db := &Database{
+		DatabaseName:         databaseName,
+		DatabaseFileName:     fileName,
+		DatabaseFileFullPath: filePath,
+		DatabaseFolderPath:   databasePath,
+		Collections:          make([]*Collection, 0),
+		Config:               Config,
+	}
+
+	utils.CreateFolder(databasePath)
+	db.SaveDatabaseToFile()
+	db.CreateColls(collectionsInput)
+
+	return db
+}
+
+func LoadDatabase(database DatabaseFileStruct) *Database {
+	return &Database{
+		DatabaseName:         database.DatabaseName,
+		DatabaseFileName:     database.DatabaseFileName,
+		DatabaseFileFullPath: database.DatabaseFileFullPath,
+		DatabaseFolderPath:   database.DatabaseFolderPath,
+		Collections:          make([]*Collection, 0),
+		Config:               database.Config,
 	}
 }
 
-func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Collection {
+func (db *Database) DeleteDatabase() {
+	println("DatabaseFolderPath ", db.DatabaseFolderPath)
+
+	os.RemoveAll(db.DatabaseFolderPath)
+
+	for _, collection := range db.Collections {
+		collection.DeleteCollection()
+	}
+}
+
+func (db *Database) CreateColls(collectionsInput []CollectionInput) []*Collection {
 	var collections []*Collection = make([]*Collection, 0)
 	for _, collectionInput := range collectionsInput {
-		if IsCollectionExists := db.GetCollection(collectionInput.CollectionName); IsCollectionExists == nil {
+		if IsCollectionExists := db.GetColl(collectionInput.CollectionName); IsCollectionExists == nil {
 			collection := CreateCollection(collectionInput, db)
 			db.Collections = append(db.Collections, collection)
 			collections = append(collections, collection)
@@ -48,17 +83,15 @@ func (db *Database) CreateCollections(collectionsInput []CollectionInput) []*Col
 	return collections
 }
 
-func (db *Database) DeleteCollections(collectionNamesToDelete []string) *Database {
-	var Collections []*Collection = db.Collections
+func (db *Database) DeleteColls(collectionNamesToDelete []string) *Database {
+	var Collections []*Collection
 
 	for _, collectionNameToDelete := range collectionNamesToDelete {
-		for collectionIndex, collection := range Collections {
-			if collectionNameToDelete == collection.CollectionName {
-				collection.Clear()
-
-				collection.IsDeleted = true
-
-				Collections[collectionIndex] = collection
+		for _, collection := range db.Collections {
+			if collectionNameToDelete != collection.CollectionName {
+				Collections = append(Collections, collection)
+			} else {
+				collection.DeleteCollection()
 			}
 		}
 	}
@@ -68,7 +101,11 @@ func (db *Database) DeleteCollections(collectionNamesToDelete []string) *Databas
 	return db
 }
 
-func (db *Database) GetCollection(collectionName string) *Collection {
+func (db *Database) LoadColls(collectionsGob []CollectionFileStruct) []*Collection {
+	return LoadCollections(collectionsGob)
+}
+
+func (db *Database) GetColl(collectionName string) *Collection {
 	for _, collection := range db.Collections {
 		if collection.CollectionName == collectionName {
 			return collection
@@ -86,7 +123,6 @@ func (db *Database) SaveDatabaseToFile() {
 		DatabaseFileName:     db.DatabaseFileName,
 		DatabaseFileFullPath: db.DatabaseFileFullPath,
 		Config:               db.Config,
-		IsDeleted:            db.IsDeleted,
 	}
 
 	gobData, err := utils.EncodeGob(temp)
@@ -98,7 +134,7 @@ func (db *Database) SaveDatabaseToFile() {
 	err = utils.SaveToFile(db.DatabaseFileFullPath, gobData)
 
 	if err != nil {
-		fmt.Println("Error saving GOB to file:", err)
+		fmt.Println("Error saving database GOB to file:", err)
 	}
 
 	fmt.Println("GOB data saved to ", db.DatabaseName)

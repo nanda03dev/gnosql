@@ -21,7 +21,6 @@ type IndexIdsmap map[string]MapString // Ex: { chennai: {id1: ok , ids2: ok}}
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
-	IsDeleted          bool         `json:"IsDeleted"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
@@ -33,7 +32,6 @@ type Collection struct {
 
 type CollectionFileStruct struct {
 	CollectionName     string       `json:"CollectionName"`
-	IsDeleted          bool         `json:"IsDeleted"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
@@ -65,7 +63,6 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			mu:                 sync.RWMutex{},
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
-			IsDeleted:          false,
 		}
 
 	collection.SaveCollectionToFile()
@@ -73,26 +70,30 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 	return collection
 }
 
-func LoadCollections(collections []CollectionFileStruct) []*Collection {
-	var collectionInstances = make([]*Collection, 0)
+func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
+	var collections = make([]*Collection, 0)
 
-	for _, collection := range collections {
-		collectionInstance := &Collection{
-			CollectionName:     collection.CollectionName,
-			IndexKeys:          collection.IndexKeys,
-			DocumentsMap:       collection.DocumentsMap,
-			DocumentIds:        collection.DocumentIds,
-			IndexMap:           collection.IndexMap,
-			CollectionFileName: collection.CollectionFileName,
-			CollectionFullPath: collection.CollectionFullPath,
+	for _, collectionGob := range collectionsGob {
+		collection := &Collection{
+			CollectionName:     collectionGob.CollectionName,
+			IndexKeys:          collectionGob.IndexKeys,
+			DocumentsMap:       collectionGob.DocumentsMap,
+			DocumentIds:        collectionGob.DocumentIds,
+			IndexMap:           collectionGob.IndexMap,
+			CollectionFileName: collectionGob.CollectionFileName,
+			CollectionFullPath: collectionGob.CollectionFullPath,
 			mu:                 sync.RWMutex{},
-			IsDeleted:          collection.IsDeleted,
 		}
 
-		collectionInstances = append(collectionInstances, collectionInstance)
+		collections = append(collections, collection)
 	}
 
-	return collectionInstances
+	return collections
+}
+
+func (collection *Collection) DeleteCollection() {
+	utils.DeleteFile(collection.CollectionFullPath)
+	collection.Clear()
 }
 
 func (collection *Collection) Create(value Document) Document {
@@ -160,21 +161,19 @@ outerLoop:
 	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
 	fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
 
-	// Create a channel to communicate results
-	resultChannel := make(chan Document)
+	filteredIdsLength := len(filteredIds)
 
 	workerCount := 4
 	// Use a WaitGroup to wait for the goroutine to finish
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
 
-	filteredIdsLength := len(filteredIds)
+	// Create a channel to communicate results
+	resultChannel := make(chan Document, filteredIdsLength/workerCount)
 
 	for i := 0; i < workerCount; i++ {
 		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds[i*filteredIdsLength/workerCount:(i+1)*filteredIdsLength/workerCount])
 	}
-
-	// go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds)
 
 	// Use another goroutine to close the result channel when the filtering is done
 	go func() {
@@ -433,7 +432,6 @@ func (collection *Collection) SaveCollectionToFile() {
 		IndexMap:           collection.IndexMap,
 		CollectionFileName: collection.CollectionFileName,
 		CollectionFullPath: collection.CollectionFullPath,
-		IsDeleted:          collection.IsDeleted,
 	}
 
 	gobData, err := utils.EncodeGob(temp)
@@ -445,7 +443,7 @@ func (collection *Collection) SaveCollectionToFile() {
 	err = utils.SaveToFile(collection.CollectionFullPath, gobData)
 
 	if err != nil {
-		fmt.Println("Error saving GOB to file:", err)
+		fmt.Println("Error saving collection GOB to file:", err)
 	}
 
 	fmt.Println("GOB data saved to ", collection.CollectionName)
