@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"gnosql/src/in_memory_database"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"gnosql/src/in_memory_database"
+	"gnosql/src/utils"
+	"net/http"
 )
 
 // @Summary      Create new database
@@ -202,15 +202,24 @@ func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection
 // @Router       /document/{databaseName}/{collectionName}/ [post]
 func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 
-	var value map[string]interface{}
+	var value in_memory_database.Document
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	result := collection.Create(value)
+	uniqueUuid := utils.Generate16DigitUUID()
 
-	c.JSON(http.StatusCreated, gin.H{"data": result})
+	value["id"] = uniqueUuid
+
+	var createEvent in_memory_database.Event = in_memory_database.Event{
+		Type:      utils.EVENT_CREATE,
+		EventData: value,
+	}
+
+	collection.EventChannel <- createEvent
+
+	c.JSON(http.StatusCreated, gin.H{"data": value})
 }
 
 // @Summary      Read by id
@@ -265,19 +274,32 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Router       /document/{databaseName}/{collectionName}/{id} [put]
 func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	id := c.Param("id")
-	var value map[string]interface{}
+	var value in_memory_database.Document
 	if err := c.BindJSON(&value); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	result := collection.Update(id, value)
+	var existingDocument in_memory_database.Document = collection.Read(id)
 
-	if result == nil {
+	if existingDocument == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "document not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": result})
+
+	for key, value := range value {
+		existingDocument[key] = value
+	}
+
+	var updateEvent in_memory_database.Event = in_memory_database.Event{
+		Type:      utils.EVENT_UPDATE,
+		Id:        id,
+		EventData: existingDocument,
+	}
+
+	collection.EventChannel <- updateEvent
+
+	c.JSON(http.StatusOK, gin.H{"data": existingDocument})
 }
 
 // @Summary      Delete document
@@ -291,12 +313,20 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [delete]
 func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-
 	id := c.Param("id")
-	if err := collection.Delete(id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+
+	if err := collection.Read(id); err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "document not found"})
 		return
 	}
+
+	var deleteEvent in_memory_database.Event = in_memory_database.Event{
+		Type: utils.EVENT_DELETE,
+		Id:   id,
+	}
+
+	collection.EventChannel <- deleteEvent
+
 	c.JSON(http.StatusOK, gin.H{"message": "Data deleted successfully"})
 }
 

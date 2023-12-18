@@ -17,5 +17,5 @@ services:
             PORT: 3000
             GIN_MODE: debug
 volumes:
-  gnosqldb-data-local:
-    name: gnosqldb-data-local
+    gnosqldb-data-local:
+        name: gnosqldb-data-local

@@ -19,6 +19,12 @@ type IndexMap map[string]IndexIdsmap //  Ex: { city :{ chennai: {id1: ok , ids2:
 
 type IndexIdsmap map[string]MapString // Ex: { chennai: {id1: ok , ids2: ok}}
 
+type Event struct {
+	Type      string
+	Id        string
+	EventData Document
+}
+
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
@@ -27,6 +33,7 @@ type Collection struct {
 	DocumentIds        DocumentIds  `json:"DocumentIds"`
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
+	EventChannel       chan Event
 	mu                 sync.RWMutex
 }
 
@@ -60,12 +67,15 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			DocumentsMap:       make(DocumentsMap),
 			DocumentIds:        make(DocumentIds, 0),
 			IndexMap:           make(IndexMap),
-			mu:                 sync.RWMutex{},
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
+			mu:                 sync.RWMutex{},
+			EventChannel:       make(chan Event, 1 * 10 * 100 * 1000),
 		}
 
 	collection.SaveCollectionToFile()
+
+	go collection.EventListener()
 
 	return collection
 }
@@ -82,12 +92,14 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			IndexMap:           collectionGob.IndexMap,
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
+			EventChannel:       make(chan Event, 1000),
 			mu:                 sync.RWMutex{},
 		}
 
+		go collection.EventListener()
+
 		collections = append(collections, collection)
 	}
-
 	return collections
 }
 
@@ -96,14 +108,12 @@ func (collection *Collection) DeleteCollection() {
 	collection.Clear()
 }
 
-func (collection *Collection) Create(value Document) Document {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
+func (collection *Collection) Create(document Document) Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
 
-	uniqueUuid := utils.Generate16DigitUUID()
+	uniqueUuid := document["id"].(string)
 
-	var document Document = value
-	document["id"] = uniqueUuid
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
 
 	collection.DocumentsMap[uniqueUuid] = document
@@ -116,15 +126,10 @@ func (collection *Collection) Create(value Document) Document {
 }
 
 func (collection *Collection) Read(id string) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
 	return collection.DocumentsMap[id]
 }
 
 func (collection *Collection) Filter(reqFilter MapInterface) []Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
 	filters := make([]MapInterface, 0)
 
 	for key, value := range reqFilter {
@@ -290,30 +295,25 @@ outerLoop:
 	return filteredIds
 }
 
-func (collection *Collection) Update(id string, updateInputData Document) Document {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
+func (collection *Collection) Update(id string, updatedDocument Document) Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
 
 	if _, exists := collection.DocumentsMap[id]; !exists {
+		fmt.Printf("id '%s' not found", id)
 		return nil
 	}
 
-	collection.updateIndex(collection.DocumentsMap[id], updateInputData)
+	collection.updateIndex(collection.DocumentsMap[id], updatedDocument)
 
-	var existingDocument, _ = collection.DocumentsMap[id]
+	collection.DocumentsMap[id] = updatedDocument
 
-	for key, value := range updateInputData {
-		existingDocument[key] = value
-	}
-
-	collection.DocumentsMap[id] = existingDocument
-
-	return existingDocument
+	return updatedDocument
 }
 
 func (collection *Collection) Delete(id string) error {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
 
 	if document, exists := collection.DocumentsMap[id]; exists {
 		delete(collection.DocumentsMap, id)
@@ -331,9 +331,6 @@ func (collection *Collection) GetIds() []string {
 }
 
 func (collection *Collection) GetAllData() []Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
 	documents := make([]Document, 0, len(collection.DocumentsMap))
 
 	for _, document := range collection.DocumentsMap {
@@ -344,16 +341,13 @@ func (collection *Collection) GetAllData() []Document {
 }
 
 func (collection *Collection) Clear() {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
 	collection.DocumentsMap = make(DocumentsMap)
 	collection.IndexMap = make(IndexMap)
 }
 
 func (collection *Collection) Stats() interface{} {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
 	statsMap := make(map[string]interface{})
 	statsMap["collectionName"] = collection.CollectionName
 	statsMap["indexKeys"] = collection.IndexKeys
@@ -395,20 +389,21 @@ func (collection *Collection) deleteIndex(document Document) {
 	}
 }
 
-func (collection *Collection) changeIndex(indexKey string, indexValue string, uniqueUuid string, isDelete bool) {
+func (collection *Collection) changeIndex(indexKey string, indexValue string, id string, isDelete bool) {
 	if _, exists := collection.IndexMap[indexKey]; !exists {
 		collection.IndexMap[indexKey] = make(IndexIdsmap)
 	}
 
-	if uniqueUuid != "" {
+	if id != "" {
 		if _, exists := collection.IndexMap[indexKey][indexValue]; !exists {
 			collection.IndexMap[indexKey][indexValue] = make(MapString)
-			// IndexMap[name][kumar] = {name:{nanda:{id1:id1, id2:id2 }}}
+			// IndexMap[city][chennai] = {city:{chennai:{id1: ok, id2:ok }}}
 		}
 		if isDelete {
-			// delete id from map ex {name:{nanda:{id1:id1, id2:id2 }}}, delete id1 from this map
+			// delete id from map example: {city:{chennai:{ id1: ok, id2: ok }}}, delete id1 from this map
+			// after deleted {city:{chennai:{ id2: ok }}}
 
-			delete(collection.IndexMap[indexKey][indexValue], uniqueUuid)
+			delete(collection.IndexMap[indexKey][indexValue], id)
 
 			if len(collection.IndexMap[indexKey][indexValue]) < 1 {
 				delete(collection.IndexMap[indexKey], indexValue)
@@ -416,8 +411,8 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, un
 			return
 		}
 
-		collection.IndexMap[indexKey][indexValue][uniqueUuid] = "ok"
-		// IndexMap[name][kumar] = append([ids1,ids2], uniqueUuid)
+		collection.IndexMap[indexKey][indexValue][id] = "ok"
+		// IndexMap[city][chennai] = {city:{chennai:{ id1: ok, ...exiting-ids}}}
 	}
 }
 
@@ -490,4 +485,22 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	}
 
 	return gobData, nil
+}
+
+func (collection *Collection) EventListener() {
+	for event := range collection.EventChannel {
+
+		fmt.Printf("\n Received event:  %v", event)
+		if event.Type == utils.EVENT_CREATE {
+			collection.Create(event.EventData)
+		}
+		if event.Type == utils.EVENT_UPDATE {
+			collection.Update(event.Id, event.EventData)
+		}
+		if event.Type == utils.EVENT_DELETE {
+			collection.Delete(event.Id)
+		}
+
+	}
+	fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
 }
