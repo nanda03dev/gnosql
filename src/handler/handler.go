@@ -179,7 +179,7 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 // @Produce      json
 // @Param        databaseName  path      string  true  "databaseName"
 // @Param        collectionName  path      string  true  "collectionName"
-// @Success      200 {object}  in_memory_database.Index
+// @Success      200 {object}  in_memory_database.IndexMap
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /collection/{databaseName}/{collectionName}/stats [get]
 func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
@@ -244,7 +244,7 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 // @Produce      json
 // @Param        databaseName  path      string  true  "databaseName"
 // @Param        collectionName  path      string  true  "collectionName"
-// @Param        document body in_memory_database.GenericKeyValue  true  "GenericKeyValue"
+// @Param        document body in_memory_database.MapInterface  true  "MapInterface"
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/filter [post]

@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"time"
 )
 
 type Document map[string]interface{}
@@ -25,6 +26,9 @@ type Event struct {
 	EventData Document
 }
 
+const EventChannelSize = 1 * 10 * 100 * 1000
+const TimerToSaveToDisk = 1 * time.Minute
+
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
@@ -35,6 +39,7 @@ type Collection struct {
 	CollectionFullPath string       `json:"CollectionFullPath"`
 	EventChannel       chan Event
 	mu                 sync.RWMutex
+	IsChanged          bool
 }
 
 type CollectionFileStruct struct {
@@ -70,12 +75,11 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
 			mu:                 sync.RWMutex{},
-			EventChannel:       make(chan Event, 1 * 10 * 100 * 1000),
+			EventChannel:       make(chan Event, EventChannelSize),
+			IsChanged:          true,
 		}
 
-	collection.SaveCollectionToFile()
-
-	go collection.EventListener()
+	collection.StartInternalFunctions()
 
 	return collection
 }
@@ -92,11 +96,12 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			IndexMap:           collectionGob.IndexMap,
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
-			EventChannel:       make(chan Event, 1000),
+			EventChannel:       make(chan Event, EventChannelSize),
 			mu:                 sync.RWMutex{},
+			IsChanged:          false,
 		}
 
-		go collection.EventListener()
+		collection.StartInternalFunctions()
 
 		collections = append(collections, collection)
 	}
@@ -121,6 +126,8 @@ func (collection *Collection) Create(document Document) Document {
 	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
 
 	collection.createIndex(document)
+
+	collection.IsChanged = true
 
 	return document
 }
@@ -173,11 +180,15 @@ outerLoop:
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
 
+	var ResultChannelSize = filteredIdsLength / workerCount
+
 	// Create a channel to communicate results
-	resultChannel := make(chan Document, filteredIdsLength/workerCount)
+	resultChannel := make(chan Document, ResultChannelSize)
 
 	for i := 0; i < workerCount; i++ {
-		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds[i*filteredIdsLength/workerCount:(i+1)*filteredIdsLength/workerCount])
+		start := i * filteredIdsLength / workerCount
+		end := (i + 1) * filteredIdsLength / workerCount
+		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds, start, end)
 	}
 
 	// Use another goroutine to close the result channel when the filtering is done
@@ -202,10 +213,11 @@ outerLoop:
 
 }
 
-func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds) {
+func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds, start int, end int) {
 	defer wg.Done()
 
-	for _, id := range filteredIds {
+	for i := start; i < end; i++ {
+		id := filteredIds[i]
 		var isMatch bool = true
 		document := collection.DocumentsMap[id]
 
@@ -221,7 +233,6 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 		if isMatch {
 			resultChannel <- document
 		}
-
 	}
 }
 
@@ -308,6 +319,7 @@ func (collection *Collection) Update(id string, updatedDocument Document) Docume
 
 	collection.DocumentsMap[id] = updatedDocument
 
+	collection.IsChanged = true
 	return updatedDocument
 }
 
@@ -323,6 +335,7 @@ func (collection *Collection) Delete(id string) error {
 		return fmt.Errorf("id '%s' not found", id)
 	}
 
+	collection.IsChanged = true
 	return nil
 }
 
@@ -345,6 +358,7 @@ func (collection *Collection) Clear() {
 	defer collection.mu.RUnlock()
 	collection.DocumentsMap = make(DocumentsMap)
 	collection.IndexMap = make(IndexMap)
+	collection.IsChanged = true
 }
 
 func (collection *Collection) Stats() interface{} {
@@ -442,6 +456,8 @@ func (collection *Collection) SaveCollectionToFile() {
 	}
 
 	fmt.Println("GOB data saved to ", collection.CollectionName)
+
+	collection.IsChanged = false
 }
 
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
@@ -487,6 +503,17 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	return gobData, nil
 }
 
+func (collection *Collection) StartTimerToSaveFile() {
+	for range time.Tick(TimerToSaveToDisk) {
+		collection.EventChannel <- Event{Type: utils.EVENT_SAVE_TO_DISK}
+	}
+}
+
+func (collection *Collection) StartInternalFunctions() {
+	go collection.StartTimerToSaveFile()
+	go collection.EventListener()
+}
+
 func (collection *Collection) EventListener() {
 	for event := range collection.EventChannel {
 
@@ -499,6 +526,13 @@ func (collection *Collection) EventListener() {
 		}
 		if event.Type == utils.EVENT_DELETE {
 			collection.Delete(event.Id)
+		}
+		if event.Type == utils.EVENT_SAVE_TO_DISK {
+			if collection.IsChanged {
+				collection.SaveCollectionToFile()
+			} else {
+				println("No changes occured in collection : ", collection.CollectionName)
+			}
 		}
 
 	}

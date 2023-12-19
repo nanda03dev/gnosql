@@ -162,7 +162,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.Index"
+                            "$ref": "#/definitions/in_memory_database.IndexMap"
                         }
                     },
                     "400": {
@@ -392,12 +392,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "GenericKeyValue",
+                        "description": "MapInterface",
                         "name": "document",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.GenericKeyValue"
+                            "$ref": "#/definitions/in_memory_database.MapInterface"
                         }
                     }
                 ],
@@ -599,28 +599,39 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": true
         },
-        "in_memory_database.GenericKeyValue": {
+        "in_memory_database.IndexIdsmap": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/in_memory_database.MapString"
+            }
+        },
+        "in_memory_database.IndexMap": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/in_memory_database.IndexIdsmap"
+            }
+        },
+        "in_memory_database.MapInterface": {
             "type": "object",
             "additionalProperties": true
         },
-        "in_memory_database.Index": {
+        "in_memory_database.MapString": {
             "type": "object",
             "additionalProperties": {
-                "$ref": "#/definitions/in_memory_database.IndexValue"
-            }
-        },
-        "in_memory_database.IndexValue": {
-            "type": "object",
-            "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                    "type": "string"
-                }
+                "type": "string"
             }
         },
         "router.DatabaseRequestInput": {
             "type": "object",
             "properties": {
+                "collections": {
+                    "description": "Example: collections",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
                 "databaseName": {
                     "description": "Example: databaseName",
                     "type": "string"

@@ -1,4 +1,4 @@
-<p align="center">GnoSQL Database App</p>
+<h1 align="center">GnoSQL Database</h1>
 
 GnoSQL is a lightweight, in-memory NoSQL database implemented in Go. It offers a simple and intuitive API for storing and retrieving data without the need for a persistent backend. With support for concurrent operations through goroutines.
 
@@ -8,42 +8,19 @@ Resources
 
 -   [Nandakumar](https://github.com/Nandha23311/)
 
-## Prerequisites
-
-To run this application, you will need the following:
-
--   Golang installed
-
 ## Installation
 
-To install this application, follow these steps:
-
-1. Clone this repository:
-
-    ```bash
-    git clone https://github.com/Nandha23311/gnosql.git
-    ```
-
-2. Run the following command to install the dependencies:
-    ```bash
-    go mod download
-    ```
-
-## Usage
-
-To run the application, you will need to configure the connection to your NoSQL database.
-
-Once configured, run the application with the following command:
+1. Run the following command to pull gnosql image:
 
 ```bash
-go run main.go
+docker pull gnosql
 ```
+
+## Usage
 
 To run application using docker
 
 ```bash
-docker build gnosql .
-
 docker run -p 8080:8080 gnosql
 ```
 
@@ -139,6 +116,6 @@ The application will start and listen for connections on port 8080. Use an HTTP 
     Method: GET
     Retrieve all documents from the specified collection in the specified database.
 
-## Contributing
+#### Swagger Documentation
 
-If you would like to contribute to this project, please fork this repository and create a pull request. Ensure that you follow the project's style guide and guidelines.
+    Explore the API using Swagger: [Swagger Documentation](/swagger/index.html#/)

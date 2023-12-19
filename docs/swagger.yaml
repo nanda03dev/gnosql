@@ -14,21 +14,29 @@ definitions:
   in_memory_database.Document:
     additionalProperties: true
     type: object
-  in_memory_database.GenericKeyValue:
+  in_memory_database.IndexIdsmap:
+    additionalProperties:
+      $ref: '#/definitions/in_memory_database.MapString'
+    type: object
+  in_memory_database.IndexMap:
+    additionalProperties:
+      $ref: '#/definitions/in_memory_database.IndexIdsmap'
+    type: object
+  in_memory_database.MapInterface:
     additionalProperties: true
     type: object
-  in_memory_database.Index:
+  in_memory_database.MapString:
     additionalProperties:
-      $ref: '#/definitions/in_memory_database.IndexValue'
-    type: object
-  in_memory_database.IndexValue:
-    additionalProperties:
-      additionalProperties:
-        type: string
-      type: object
+      type: string
     type: object
   router.DatabaseRequestInput:
     properties:
+      collections:
+        description: 'Example: collections'
+        items:
+          additionalProperties: true
+          type: object
+        type: array
       databaseName:
         description: 'Example: databaseName'
         type: string
@@ -66,7 +74,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/in_memory_database.Index'
+            $ref: '#/definitions/in_memory_database.IndexMap'
         "400":
           description: Database/Collection deleted
       summary: Collection stats
@@ -382,12 +390,12 @@ paths:
         name: collectionName
         required: true
         type: string
-      - description: GenericKeyValue
+      - description: MapInterface
         in: body
         name: document
         required: true
         schema:
-          $ref: '#/definitions/in_memory_database.GenericKeyValue'
+          $ref: '#/definitions/in_memory_database.MapInterface'
       produces:
       - application/json
       responses:
