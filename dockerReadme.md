@@ -21,16 +21,18 @@ docker pull gnosql
 To run application using docker
 
 ```bash
-docker run -p 8080:8080 gnosql
+docker run -p 5454:5454 gnosql
 ```
 
 If you want to run database in specfic port you can pass PORT number as environment variables,
 
 ```bash
-docker run -p 8080:3000 -e PORT=3000 gnosql
+docker run -p 5454:3000 -e PORT=3000 gnosql
 ```
 
-The application will start and listen for connections on port 8080. Use an HTTP client to send requests to the application.
+The application will start and listen for connections on port 5454. Use an HTTP client to send requests to the application.
+
+The database files are stored in the container path "/root/gnosql/db". To persist this data, please specify a host volume path and the corresponding container path before starting the container.
 
 ### Database Endpoints
 

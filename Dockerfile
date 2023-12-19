@@ -20,7 +20,7 @@ RUN go build -o gnosql .
 
 # # Expose the port that the server listens on
 
-# EXPOSE 8001
+EXPOSE 5454
 
 # Set the command to run the server when the container starts
 CMD ["./gnosql"]
