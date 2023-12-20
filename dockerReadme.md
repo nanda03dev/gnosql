@@ -36,87 +36,19 @@ The database files are stored in the container path "/root/gnosql/db". To persis
 
 ### Database Endpoints
 
-#### Add Database
-
-    Endpoint: `/database/add`
-    Method: POST
-    Add a new database to GnoSQL.
-
-#### Delete Database
-
-    Endpoint: `/database/delete`
-    Method: POST
-    Delete an existing database from GnoSQL.
-
-#### Get All Databases
-
-    Endpoint: `/database/get-all`
-    Method: GET
-    Retrieve a list of all databases in GnoSQL.
-
-### Collection Endpoints
-
-#### Add Collection
-
-    Endpoint: `/collection/{databaseName}/add`
-    Method: POST
-    Add a new collection to the specified database in GnoSQL.
-
-#### Delete Collection
-
-    Endpoint: `/collection/{databaseName}/delete`
-    Method: POST
-    Delete an existing collection from the specified database in GnoSQL.
-
-#### Get All Collections
-
-    Endpoint: `/collection/{databaseName}/get-all`
-    Method: GET
-    Retrieve a list of all collections in the specified database in GnoSQL.
-
-#### Collection Statistics
-
-    Endpoint: `/collection/{databaseName}/{collectionName}/stats`
-    Method: GET
-    Retrieve statistics for the specified collection in the specified database.
-
-### Document Endpoints
-
-#### Add Document
-
-    Endpoint: `/document/{databaseName}/{collectionName}/`
-    Method: POST
-    Add a new document to the specified collection in the specified database.
-
-#### Get Document by ID
-
-    Endpoint: `/document/{databaseName}/{collectionName}/{id}`
-    Method: GET
-    Retrieve a document by ID from the specified collection in the specified database.
-
-#### Filter Documents
-
-    Endpoint: `/document/{databaseName}/{collectionName}/filter`
-    Method: POST
-    Filter documents in the specified collection in the specified database.
-
-#### Update Document
-
-    Endpoint: `/document/{databaseName}/{collectionName}/{id}`
-    Method: PUT
-    Update a document by ID in the specified collection in the specified database.
-
-#### Delete Document
-
-    Endpoint: `/document/{databaseName}/{collectionName}/{id}`
-    Method: DELETE
-    Delete a document by ID from the specified collection in the specified database.
-
-#### Get All Documents
-
-    Endpoint: `/document/{databaseName}/{collectionName}/all-data`
-    Method: GET
-    Retrieve all documents from the specified collection in the specified database.
+    * [POST]   /database/add
+    * [POST]   /database/delete
+    * [GET]    /database/get-all
+    * [POST]   /collection/{databaseName}/add
+    * [POST]   /collection/{databaseName}/delete
+    * [GET]    /collection/{databaseName}/get-all
+    * [GET]    /collection/{databaseName}/{collectionName}/stats
+    * [POST]   /document/{databaseName}/{collectionName}/
+    * [GET]    /document/{databaseName}/{collectionName}/{id}
+    * [POST]   /document/{databaseName}/{collectionName}/filter
+    * [PUT]    /document/{databaseName}/{collectionName}/{id}
+    * [DELETE] /document/{databaseName}/{collectionName}/{id}
+    * [GET]    /document/{databaseName}/{collectionName}/all-data
 
 #### Swagger Documentation
 
