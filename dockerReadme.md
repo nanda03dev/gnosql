@@ -18,7 +18,7 @@ docker pull gnosql
 
 ## Usage
 
-To run application using docker
+To run application using docker img
 
 ```bash
 docker run -p 5454:5454 gnosql
@@ -31,6 +31,30 @@ docker run -p 5454:3000 -e PORT=3000 gnosql
 ```
 
 The application will start and listen for connections on port 5454. Use an HTTP client to send requests to the application.
+
+To run application using docker compose file
+
+Example `docker-compose.yml` file for gnosql
+```bash
+version: "3.9"
+name: gnosql
+services:
+    gnosql:
+        container_name: "gnosql"
+        image: gnosql
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - 5454:5454
+        volumes:
+            - gnosqldb-data:/root/gnosql/db/
+        environment:
+            PORT: 5454
+volumes:
+    gnosqldb-data:
+        name: gnosqldb-data
+```
 
 The database files are stored in the container path "/root/gnosql/db". To persist this data, please specify a host volume path and the corresponding container path before starting the container.
 

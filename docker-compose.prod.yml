@@ -1,0 +1,20 @@
+version: "3.9"
+name: gnosql
+services:
+    gnosql:
+        container_name: "gnosql"
+        image: gnosql
+        build:
+            context: .
+            dockerfile: Dockerfile.prod
+        ports:
+            # <<local host port >>:<<container port>>
+            - 5454:5454
+        volumes:
+            - gnosqldb-data:/root/gnosql/db/
+        environment:
+            PORT: 5454
+            GIN_MODE: release
+volumes:
+    gnosqldb-data:
+        name: gnosqldb-data

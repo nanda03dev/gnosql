@@ -51,7 +51,6 @@ func CreateDatabaseFolder() bool {
 }
 
 func CreateFolder(nestedFolderPath string) (string, error) {
-	println("nestedFolderPath ", nestedFolderPath)
 
 	// Check if the nested folders already exist
 	if _, err := os.Stat(nestedFolderPath); os.IsNotExist(err) {
