@@ -26,6 +26,12 @@ type Event struct {
 	EventData Document
 }
 
+type CollectionStats struct {
+	CollectionName string   `json:"CollectionName"`
+	IndexKeys      []string `json:"IndexKeys"`
+	Documents      int      `json:"Documents"`
+}
+
 const EventChannelSize = 1 * 10 * 100 * 1000
 const TimerToSaveToDisk = 1 * time.Minute
 
@@ -361,12 +367,12 @@ func (collection *Collection) Clear() {
 	collection.IsChanged = true
 }
 
-func (collection *Collection) Stats() interface{} {
-	statsMap := make(map[string]interface{})
-	statsMap["collectionName"] = collection.CollectionName
-	statsMap["indexKeys"] = collection.IndexKeys
-	statsMap["documents"] = len(collection.DocumentsMap)
-
+func (collection *Collection) Stats() CollectionStats {
+	var statsMap = CollectionStats{
+		CollectionName: collection.CollectionName,
+		IndexKeys:      collection.IndexKeys,
+		Documents:      len(collection.DocumentsMap),
+	}
 	return statsMap
 }
 
@@ -464,10 +470,10 @@ func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionI
 	var collectionsInput []CollectionInput
 
 	for _, each := range collectionsInterface {
-		if collectionName, ok := each.(map[string]interface{})["collectionName"].(string); ok {
+		if collectionName, ok := each.(map[string]interface{})["CollectionName"].(string); ok {
 			var indexKeys = make([]string, 0)
 
-			for _, each := range each.(map[string]interface{})["indexKeys"].([]interface{}) {
+			for _, each := range each.(map[string]interface{})["IndexKeys"].([]interface{}) {
 				indexKeys = append(indexKeys, each.(string))
 			}
 

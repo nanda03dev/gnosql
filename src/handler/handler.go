@@ -2,10 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -24,7 +25,7 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	databaseName := value["databaseName"].(string)
+	databaseName := value["DatabaseName"].(string)
 	collectionsInterface := make([]interface{}, 0)
 
 	if collections, exists := value["collections"]; exists {
@@ -32,13 +33,13 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	}
 
 	if dbExists := gnoSQL.GetDB(databaseName); dbExists != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Database already exists"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Database already exists"})
 		return
 	}
 
 	gnoSQL.CreateDB(databaseName, in_memory_database.ConvertToCollectionInputs(collectionsInterface))
 
-	c.JSON(http.StatusCreated, gin.H{"data": "database created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"Data": "database created successfully"})
 }
 
 // @Summary      Delete database
@@ -82,11 +83,9 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	for _, database := range gnoSQL.Databases {
 		databaseNames = append(databaseNames, database.DatabaseName)
 	}
-	// Serialize data to JSON
-	responseData, _ := json.Marshal(databaseNames)
 
 	// Send the JSON response
-	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
+	c.JSON(http.StatusOK, gin.H{"Data": databaseNames})
 }
 
 // @Summary      Load database to disk
@@ -120,7 +119,7 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 
 	db.CreateColls(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
-	c.JSON(http.StatusCreated, gin.H{"data": "collection created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"Data": "collection created successfully"})
 }
 
 // @Summary      Delete collection
@@ -142,12 +141,12 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 	}
 
 	// var indexKeys = make([]string, 0)
-	if collections, ok := value["collections"]; ok {
+	if collections, ok := value["Collections"]; ok {
 		db.DeleteColls(collections)
 
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": "collection successfully deleted"})
+	c.JSON(http.StatusOK, gin.H{"Data": "collection successfully deleted"})
 }
 
 // @Summary      Get all collections
@@ -166,11 +165,9 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 	for _, collection := range allCollections {
 		collections = append(collections, collection.CollectionName)
 	}
-	// Serialize data to JSON
-	responseData, _ := json.Marshal(collections)
 
 	// Send the JSON response
-	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
+	c.JSON(http.StatusOK, gin.H{"Data": collections})
 }
 
 // @Summary      Collection stats
@@ -183,11 +180,8 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /collection/{databaseName}/{collectionName}/stats [get]
 func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	// Serialize data to JSON
-	responseData, _ := json.Marshal(collection.Stats())
-
 	// Send the JSON response
-	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
+	c.JSON(http.StatusOK, gin.H{"Data": collection.Stats()})
 }
 
 // @Summary      Create new document
@@ -219,7 +213,7 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	collection.EventChannel <- createEvent
 
-	c.JSON(http.StatusCreated, gin.H{"data": value})
+	c.JSON(http.StatusCreated, gin.H{"Data": value})
 }
 
 // @Summary      Read by id
@@ -235,7 +229,7 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
 	id := c.Param("id")
 	result := collection.Read(id)
-	c.JSON(http.StatusOK, gin.H{"data": result})
+	c.JSON(http.StatusOK, gin.H{"Data": result})
 }
 
 // @Summary      Filter document
@@ -258,7 +252,7 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	result := collection.Filter(value)
 
-	c.JSON(http.StatusOK, gin.H{"data": result})
+	c.JSON(http.StatusOK, gin.H{"Data": result})
 }
 
 // @Summary      Update document
@@ -283,7 +277,7 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 	var existingDocument in_memory_database.Document = collection.Read(id)
 
 	if existingDocument == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "document not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "document not found"})
 		return
 	}
 
@@ -299,7 +293,7 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	collection.EventChannel <- updateEvent
 
-	c.JSON(http.StatusOK, gin.H{"data": existingDocument})
+	c.JSON(http.StatusOK, gin.H{"Data": existingDocument})
 }
 
 // @Summary      Delete document
@@ -316,7 +310,7 @@ func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection 
 	id := c.Param("id")
 
 	if err := collection.Read(id); err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "document not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "document not found"})
 		return
 	}
 
@@ -327,7 +321,7 @@ func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection 
 
 	collection.EventChannel <- deleteEvent
 
-	c.JSON(http.StatusOK, gin.H{"message": "Data deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"Data": "Data deleted successfully"})
 }
 
 // @Summary      Read all document
