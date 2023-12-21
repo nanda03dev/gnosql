@@ -58,16 +58,16 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	db := gnoSQL.GetDB(value["databaseName"].(string))
+	db := gnoSQL.GetDB(value["DatabaseName"].(string))
 
 	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"data": "Unexpected error while delete database"})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "Unexpected error while delete database"})
 		return
 	}
 
 	gnoSQL.DeleteDB(db)
 
-	c.JSON(http.StatusOK, gin.H{"data": "database deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"Data": "database deleted successfully"})
 }
 
 // @Summary      Get all database
