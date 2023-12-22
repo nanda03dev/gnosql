@@ -26,8 +26,6 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	fmt.Printf("\n value %v \n ", value)
-
 	databaseName := value["DatabaseName"].(string)
 	collectionsInterface := make([]interface{}, 0)
 

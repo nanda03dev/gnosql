@@ -71,7 +71,6 @@ func (db *Database) DeleteDatabase() {
 }
 
 func (db *Database) CreateColls(collectionsInput []CollectionInput) []*Collection {
-	fmt.Printf("\n collectionsInput %s \n ", collectionsInput)
 	var collections []*Collection = make([]*Collection, 0)
 	for _, collectionInput := range collectionsInput {
 		if IsCollectionExists := db.GetColl(collectionInput.CollectionName); IsCollectionExists == nil {

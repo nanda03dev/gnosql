@@ -30,6 +30,11 @@ type GnoSQLServiceClient interface {
 	DeleteCollections(ctx context.Context, in *CollectionDeleteRequest, opts ...grpc.CallOption) (*DataStringResponse, error)
 	GetAllCollections(ctx context.Context, in *CollectionGetAllRequest, opts ...grpc.CallOption) (*CollectionGetAllResult, error)
 	GetCollectionStats(ctx context.Context, in *CollectionStatsRequest, opts ...grpc.CallOption) (*CollectionStatsResponse, error)
+	CreateDocument(ctx context.Context, in *DocumentCreateRequest, opts ...grpc.CallOption) (*DocumentCreateResponse, error)
+	ReadDocument(ctx context.Context, in *DocumentReadRequest, opts ...grpc.CallOption) (*DocumentReadResponse, error)
+	FilterDocument(ctx context.Context, in *DocumentFilterRequest, opts ...grpc.CallOption) (*DocumentFilterResponse, error)
+	UpdateDocument(ctx context.Context, in *DocumentUpdateRequest, opts ...grpc.CallOption) (*DocumentUpdateResponse, error)
+	DeleteDocument(ctx context.Context, in *DocumentDeleteRequest, opts ...grpc.CallOption) (*DocumentDeleteResponse, error)
 }
 
 type gnoSQLServiceClient struct {
@@ -112,6 +117,51 @@ func (c *gnoSQLServiceClient) GetCollectionStats(ctx context.Context, in *Collec
 	return out, nil
 }
 
+func (c *gnoSQLServiceClient) CreateDocument(ctx context.Context, in *DocumentCreateRequest, opts ...grpc.CallOption) (*DocumentCreateResponse, error) {
+	out := new(DocumentCreateResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/CreateDocument", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gnoSQLServiceClient) ReadDocument(ctx context.Context, in *DocumentReadRequest, opts ...grpc.CallOption) (*DocumentReadResponse, error) {
+	out := new(DocumentReadResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/ReadDocument", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gnoSQLServiceClient) FilterDocument(ctx context.Context, in *DocumentFilterRequest, opts ...grpc.CallOption) (*DocumentFilterResponse, error) {
+	out := new(DocumentFilterResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/FilterDocument", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gnoSQLServiceClient) UpdateDocument(ctx context.Context, in *DocumentUpdateRequest, opts ...grpc.CallOption) (*DocumentUpdateResponse, error) {
+	out := new(DocumentUpdateResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/UpdateDocument", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gnoSQLServiceClient) DeleteDocument(ctx context.Context, in *DocumentDeleteRequest, opts ...grpc.CallOption) (*DocumentDeleteResponse, error) {
+	out := new(DocumentDeleteResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/DeleteDocument", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GnoSQLServiceServer is the server API for GnoSQLService service.
 // All implementations must embed UnimplementedGnoSQLServiceServer
 // for forward compatibility
@@ -124,6 +174,11 @@ type GnoSQLServiceServer interface {
 	DeleteCollections(context.Context, *CollectionDeleteRequest) (*DataStringResponse, error)
 	GetAllCollections(context.Context, *CollectionGetAllRequest) (*CollectionGetAllResult, error)
 	GetCollectionStats(context.Context, *CollectionStatsRequest) (*CollectionStatsResponse, error)
+	CreateDocument(context.Context, *DocumentCreateRequest) (*DocumentCreateResponse, error)
+	ReadDocument(context.Context, *DocumentReadRequest) (*DocumentReadResponse, error)
+	FilterDocument(context.Context, *DocumentFilterRequest) (*DocumentFilterResponse, error)
+	UpdateDocument(context.Context, *DocumentUpdateRequest) (*DocumentUpdateResponse, error)
+	DeleteDocument(context.Context, *DocumentDeleteRequest) (*DocumentDeleteResponse, error)
 	mustEmbedUnimplementedGnoSQLServiceServer()
 }
 
@@ -154,6 +209,21 @@ func (UnimplementedGnoSQLServiceServer) GetAllCollections(context.Context, *Coll
 }
 func (UnimplementedGnoSQLServiceServer) GetCollectionStats(context.Context, *CollectionStatsRequest) (*CollectionStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCollectionStats not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) CreateDocument(context.Context, *DocumentCreateRequest) (*DocumentCreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateDocument not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) ReadDocument(context.Context, *DocumentReadRequest) (*DocumentReadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadDocument not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) FilterDocument(context.Context, *DocumentFilterRequest) (*DocumentFilterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FilterDocument not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) UpdateDocument(context.Context, *DocumentUpdateRequest) (*DocumentUpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDocument not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) DeleteDocument(context.Context, *DocumentDeleteRequest) (*DocumentDeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteDocument not implemented")
 }
 func (UnimplementedGnoSQLServiceServer) mustEmbedUnimplementedGnoSQLServiceServer() {}
 
@@ -312,6 +382,96 @@ func _GnoSQLService_GetCollectionStats_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GnoSQLService_CreateDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentCreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).CreateDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/CreateDocument",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).CreateDocument(ctx, req.(*DocumentCreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GnoSQLService_ReadDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentReadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).ReadDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/ReadDocument",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).ReadDocument(ctx, req.(*DocumentReadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GnoSQLService_FilterDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentFilterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).FilterDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/FilterDocument",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).FilterDocument(ctx, req.(*DocumentFilterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GnoSQLService_UpdateDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).UpdateDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/UpdateDocument",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).UpdateDocument(ctx, req.(*DocumentUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GnoSQLService_DeleteDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).DeleteDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/DeleteDocument",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).DeleteDocument(ctx, req.(*DocumentDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GnoSQLService_ServiceDesc is the grpc.ServiceDesc for GnoSQLService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -350,6 +510,26 @@ var GnoSQLService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCollectionStats",
 			Handler:    _GnoSQLService_GetCollectionStats_Handler,
+		},
+		{
+			MethodName: "CreateDocument",
+			Handler:    _GnoSQLService_CreateDocument_Handler,
+		},
+		{
+			MethodName: "ReadDocument",
+			Handler:    _GnoSQLService_ReadDocument_Handler,
+		},
+		{
+			MethodName: "FilterDocument",
+			Handler:    _GnoSQLService_FilterDocument_Handler,
+		},
+		{
+			MethodName: "UpdateDocument",
+			Handler:    _GnoSQLService_UpdateDocument_Handler,
+		},
+		{
+			MethodName: "DeleteDocument",
+			Handler:    _GnoSQLService_DeleteDocument_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

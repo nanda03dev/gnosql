@@ -10,6 +10,7 @@ services:
         ports:
             # <<local host port >>:<<container port>>
             - 5454:3000
+            - 5455:5455
         volumes:
             - .:/app
             - gnosqldb-data-local:/root/gnosql/db/

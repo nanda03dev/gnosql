@@ -27,7 +27,7 @@ func (s *GnoSQLServer) CreateNewDatabase(ctx context.Context, req *pb.DatabaseCr
 		Data: "Database successfully created",
 	}
 
-	db := s.GnoSQL.GetDB(req.GetDatabaseName())
+	db := s.GnoSQL.GetDB(req.DatabaseName)
 
 	if db != nil {
 		response.Data = ""
@@ -39,15 +39,13 @@ func (s *GnoSQLServer) CreateNewDatabase(ctx context.Context, req *pb.DatabaseCr
 
 	for _, EachInput := range req.Collections {
 		collectionInput := in_memory_database.CollectionInput{
-			CollectionName: EachInput.GetCollectionName(),
+			CollectionName: EachInput.CollectionName,
 			IndexKeys:      EachInput.GetIndexKeys(),
 		}
 		collectionsInput = append(collectionsInput, collectionInput)
 	}
 
-	fmt.Printf("\n collectionsInput %v \n", req.String())
-
-	s.GnoSQL.CreateDB(req.GetDatabaseName(), collectionsInput)
+	s.GnoSQL.CreateDB(req.DatabaseName, collectionsInput)
 
 	return response, nil
 
@@ -59,7 +57,7 @@ func (s *GnoSQLServer) DeleteDatabase(ctx context.Context, req *pb.DatabaseDelet
 		Data: "Database deleted successfully",
 	}
 
-	db := s.GnoSQL.GetDB(req.GetDatabaseName())
+	db := s.GnoSQL.GetDB(req.DatabaseName)
 
 	if db == nil {
 		response.Error = "Database not found"
@@ -78,7 +76,6 @@ func (s *GnoSQLServer) GetAllDatabases(ctx context.Context, req *pb.NoRequestBod
 	for _, database := range s.GnoSQL.Databases {
 		databaseNames = append(databaseNames, database.DatabaseName)
 	}
-	fmt.Printf("Database %v ", databaseNames)
 
 	response := &pb.DatabaseGetAllResult{
 		Data: databaseNames,
@@ -104,7 +101,7 @@ func (s *GnoSQLServer) CreateNewCollection(ctx context.Context, req *pb.Collecti
 		Data: utils.COLLECTION_CREATE_SUCCESS_MSG,
 	}
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.GetDatabaseName())
+	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
 
 	if db == nil {
 		response.Data = ""
@@ -116,7 +113,7 @@ func (s *GnoSQLServer) CreateNewCollection(ctx context.Context, req *pb.Collecti
 
 	for _, EachInput := range req.Collections {
 		collectionInput := in_memory_database.CollectionInput{
-			CollectionName: EachInput.GetCollectionName(),
+			CollectionName: EachInput.CollectionName,
 			IndexKeys:      EachInput.GetIndexKeys(),
 		}
 		collectionsInput = append(collectionsInput, collectionInput)
@@ -134,7 +131,7 @@ func (s *GnoSQLServer) DeleteCollections(ctx context.Context, req *pb.Collection
 		Data: utils.COLLECTION_DELETE_SUCCESS_MSG,
 	}
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.GetDatabaseName())
+	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
 
 	if db == nil {
 		response.Data = ""
@@ -152,7 +149,7 @@ func (s *GnoSQLServer) GetAllCollections(ctx context.Context, req *pb.Collection
 
 	response := &pb.CollectionGetAllResult{}
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.GetDatabaseName())
+	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
 
 	if db == nil {
 		response.Error = "Database not found"
@@ -176,7 +173,7 @@ func (s *GnoSQLServer) GetCollectionStats(ctx context.Context, req *pb.Collectio
 
 	response := &pb.CollectionStatsResponse{}
 
-	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.GetDatabaseName(), req.GetCollectionName())
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
 
 	if db == nil {
 		response.Error = "Database not found"
@@ -199,116 +196,210 @@ func (s *GnoSQLServer) GetCollectionStats(ctx context.Context, req *pb.Collectio
 	return response, nil
 }
 
-// @Summary      Create new document
-// @Description  To create new document
-// @Tags         document
-// @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        document  body in_memory_database.Document  true  "Document"
-// @Success      200 "Document created successfully"
-// @Success      400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/ [post]
-func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
+func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreateRequest) (*pb.DocumentCreateResponse, error) {
+	response := &pb.DocumentCreateResponse{}
 
-	var value in_memory_database.Document
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
+
+	if db == nil {
+		response.Error = "Database not found"
+		return response, nil
+	}
+
+	if collection == nil {
+		response.Error = "Collection not found"
+		return response, nil
+	}
+
+	var newDocument in_memory_database.Document
+
+	// Convert JSON to Go struct
+	UnMarsalErr := json.Unmarshal([]byte(req.Document), &newDocument)
+
+	if UnMarsalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
 	}
 
 	uniqueUuid := utils.Generate16DigitUUID()
 
-	value["id"] = uniqueUuid
+	newDocument["id"] = uniqueUuid
 
 	var createEvent in_memory_database.Event = in_memory_database.Event{
 		Type:      utils.EVENT_CREATE,
-		EventData: value,
+		EventData: newDocument,
 	}
 
 	collection.EventChannel <- createEvent
 
-	c.JSON(http.StatusCreated, gin.H{"Data": value})
-}
+	responseDataString, MarshalErr := json.Marshal(newDocument)
 
-// @Summary      Read by id
-// @Description  Read document by id.
-// @Tags         document
-// @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        id  path      string  true  "search document by id"
-// @Success      200 {object}  in_memory_database.Document
-// @Success   	 400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/{id} [get]
-func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	id := c.Param("id")
-	result := collection.Read(id)
-	c.JSON(http.StatusOK, gin.H{"Data": result})
-}
-
-// @Summary      Filter document
-// @Description  Filter document
-// @Tags         document
-// @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        document body in_memory_database.MapInterface  true  "MapInterface"
-// @Success      200 {array}  in_memory_database.Document
-// @Success   	 400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/filter [post]
-func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	var value in_memory_database.MapInterface
-
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if MarshalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
 	}
 
-	result := collection.Filter(value)
+	response.Data = string(responseDataString)
 
-	c.JSON(http.StatusOK, gin.H{"Data": result})
+	return response, nil
 }
 
-// @Summary      Update document
-// @Description  To update document
-// @Tags         document
-// @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        id  path      string  true  "update document by id"
-// @Param        document  body in_memory_database.Document  true  "Document"
-// @Success      200 {object} in_memory_database.Document
-// @Success      400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/{id} [put]
-func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	id := c.Param("id")
-	var value in_memory_database.Document
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (s *GnoSQLServer) ReadDocument(ctx context.Context, req *pb.DocumentReadRequest) (*pb.DocumentReadResponse, error) {
+	response := &pb.DocumentReadResponse{}
+
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
+
+	if db == nil {
+		response.Error = "Database not found"
+		return response, nil
 	}
 
-	var existingDocument in_memory_database.Document = collection.Read(id)
+	if collection == nil {
+		response.Error = "Collection not found"
+		return response, nil
+	}
+
+	result := collection.Read(req.Id)
+
+	responseDataString, MarshalErr := json.Marshal(result)
+
+	if MarshalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
+	}
+
+	response.Data = string(responseDataString)
+
+	return response, nil
+}
+
+func (s *GnoSQLServer) FilterDocument(ctx context.Context, req *pb.DocumentFilterRequest) (*pb.DocumentFilterResponse, error) {
+	response := &pb.DocumentFilterResponse{}
+
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
+
+	if db == nil {
+		response.Error = "Database not found"
+		return response, nil
+	}
+
+	if collection == nil {
+		response.Error = "Collection not found"
+		return response, nil
+	}
+
+	var filterQuery in_memory_database.MapInterface
+
+	// Convert JSON to Go struct
+	UnMarsalErr := json.Unmarshal([]byte(req.Filter), &filterQuery)
+
+	if UnMarsalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
+	}
+
+	result := collection.Filter(filterQuery)
+
+	responseDataString, MarshalErr := json.Marshal(result)
+
+	if MarshalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
+	}
+
+	response.Data = string(responseDataString)
+
+	return response, nil
+}
+
+func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdateRequest) (*pb.DocumentUpdateResponse, error) {
+	response := &pb.DocumentUpdateResponse{}
+
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
+
+	if db == nil {
+		response.Error = "Database not found"
+		return response, nil
+	}
+
+	if collection == nil {
+		response.Error = "Collection not found"
+		return response, nil
+	}
+
+	existingDocument := collection.Read(req.Id)
 
 	if existingDocument == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "document not found"})
-		return
+		response.Error = "document not found"
+		return response, nil
 	}
 
-	for key, value := range value {
+	var document in_memory_database.Document
+
+	// Convert JSON to Go struct
+	UnMarsalErr := json.Unmarshal([]byte(req.Document), &document)
+
+	if UnMarsalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
+	}
+
+	for key, value := range document {
 		existingDocument[key] = value
 	}
 
 	var updateEvent in_memory_database.Event = in_memory_database.Event{
 		Type:      utils.EVENT_UPDATE,
-		Id:        id,
+		Id:        req.Id,
 		EventData: existingDocument,
 	}
 
 	collection.EventChannel <- updateEvent
 
-	c.JSON(http.StatusOK, gin.H{"Data": existingDocument})
+	responseDataString, MarshalErr := json.Marshal(existingDocument)
+
+	if MarshalErr != nil {
+		response.Error = "Error while marshal document"
+		return response, nil
+	}
+
+	response.Data = string(responseDataString)
+
+	return response, nil
+}
+
+func (s *GnoSQLServer) DeleteDocument(ctx context.Context, req *pb.DocumentDeleteRequest) (*pb.DocumentDeleteResponse, error) {
+	response := &pb.DocumentDeleteResponse{}
+
+	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
+
+	if db == nil {
+		response.Error = "Database not found"
+		return response, nil
+	}
+
+	if collection == nil {
+		response.Error = "Collection not found"
+		return response, nil
+	}
+
+	existingDocument := collection.Read(req.Id)
+
+	if existingDocument == nil {
+		response.Error = "document not found"
+		return response, nil
+	}
+
+	var deleteEvent in_memory_database.Event = in_memory_database.Event{
+		Type: utils.EVENT_DELETE,
+		Id:   req.Id,
+	}
+
+	collection.EventChannel <- deleteEvent
+
+	response.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
+
+	return response, nil
 }
 
 // @Summary      Delete document

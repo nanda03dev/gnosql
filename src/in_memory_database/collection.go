@@ -33,7 +33,7 @@ type CollectionStats struct {
 }
 
 const EventChannelSize = 1 * 10 * 100 * 1000
-const TimerToSaveToDisk = 1 * time.Minute
+const TimerToSaveToDisk = 100 * time.Minute
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
@@ -317,7 +317,6 @@ func (collection *Collection) Update(id string, updatedDocument Document) Docume
 	defer collection.mu.RUnlock()
 
 	if _, exists := collection.DocumentsMap[id]; !exists {
-		fmt.Printf("id '%s' not found", id)
 		return nil
 	}
 
@@ -523,7 +522,6 @@ func (collection *Collection) StartInternalFunctions() {
 func (collection *Collection) EventListener() {
 	for event := range collection.EventChannel {
 
-		fmt.Printf("\n Received event:  %v", event)
 		if event.Type == utils.EVENT_CREATE {
 			collection.Create(event.EventData)
 		}

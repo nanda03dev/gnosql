@@ -75,14 +75,78 @@ message CollectionStats  {
 	int32 Documents = 3;
 }
 
+message DocumentCreateRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+  string Document = 3;
+}
+
+message DocumentCreateResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+message DocumentReadRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+  string Id = 3;
+}
+
+message DocumentReadResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+message DocumentFilterRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+  string Filter = 3;
+}
+
+message DocumentFilterResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+message DocumentUpdateRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+  string Id = 3;
+  string Document = 4;
+}
+
+message DocumentUpdateResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+message DocumentDeleteRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+  string Id = 3;
+}
+
+message DocumentDeleteResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+
 service GnoSQLService {
   rpc CreateNewDatabase(DatabaseCreateRequest) returns (DataStringResponse);
   rpc DeleteDatabase(DatabaseDeleteRequest) returns (DataStringResponse);
   rpc GetAllDatabases(NoRequestBody) returns (DatabaseGetAllResult);
   rpc LoadToDisk(NoRequestBody) returns (DataStringResponse);
+
   rpc CreateNewCollection(CollectionCreateRequest) returns (DataStringResponse);
   rpc DeleteCollections(CollectionDeleteRequest) returns (DataStringResponse);
   rpc GetAllCollections(CollectionGetAllRequest) returns (CollectionGetAllResult);
   rpc GetCollectionStats(CollectionStatsRequest) returns (CollectionStatsResponse);
+
+  rpc CreateDocument(DocumentCreateRequest) returns (DocumentCreateResponse);
+  rpc ReadDocument(DocumentReadRequest) returns (DocumentReadResponse);
+  rpc FilterDocument(DocumentFilterRequest) returns (DocumentFilterResponse);
+  rpc UpdateDocument(DocumentUpdateRequest) returns (DocumentUpdateResponse);
+  rpc DeleteDocument(DocumentDeleteRequest) returns (DocumentDeleteResponse);
   
 }

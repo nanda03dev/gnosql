@@ -37,7 +37,7 @@ import (
 
 const (
 	// Port for gRPC server to listen to
-	PORT = ":50051"
+	PORT = ":5455"
 )
 
 // @BasePath /api/v1
