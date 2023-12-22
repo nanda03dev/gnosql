@@ -3,16 +3,10 @@ package grpc_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-
-	// "fmt"
+	"github.com/gin-gonic/gin"
 	pb "gnosql/proto"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
-
-	"github.com/gin-gonic/gin"
-
-	// "log"
 	"net/http"
 )
 

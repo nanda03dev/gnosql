@@ -2,12 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
