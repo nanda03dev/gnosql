@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
 	"net/http"
@@ -25,10 +26,12 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
+	fmt.Printf("\n value %v \n ", value)
+
 	databaseName := value["DatabaseName"].(string)
 	collectionsInterface := make([]interface{}, 0)
 
-	if collections, exists := value["collections"]; exists {
+	if collections, exists := value["Collections"]; exists {
 		collectionsInterface = collections.([]interface{})
 	}
 
@@ -119,7 +122,7 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 
 	db.CreateColls(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
-	c.JSON(http.StatusCreated, gin.H{"Data": "collection created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"Data": utils.COLLECTION_CREATE_SUCCESS_MSG})
 }
 
 // @Summary      Delete collection
@@ -143,7 +146,6 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 	// var indexKeys = make([]string, 0)
 	if collections, ok := value["Collections"]; ok {
 		db.DeleteColls(collections)
-
 	}
 
 	c.JSON(http.StatusOK, gin.H{"Data": "collection successfully deleted"})

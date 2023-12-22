@@ -18,3 +18,8 @@ var EVENT_CREATE = "EVENT_CREATE"
 var EVENT_UPDATE = "EVENT_UPDATE"
 var EVENT_DELETE = "EVENT_DELETE"
 var EVENT_SAVE_TO_DISK = "EVENT_SAVE_TO_DISK"
+
+var COLLECTION_CREATE_SUCCESS_MSG = "Collection created successfully"
+var COLLECTION_DELETE_SUCCESS_MSG = "Collection deleted successfully"
+var DATABASE_CREATE_SUCCESS_MSG = "Database created successfully"
+var DATABASE_DELETE_SUCCESS_MSG = "Database deleted successfully"

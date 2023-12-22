@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "gnosql/proto";
+
+message DatabaseCreateRequest {
+  string DatabaseName = 1;
+  repeated CollectionInput Collections = 2;
+}
+
+message DatabaseDeleteRequest {
+  string DatabaseName = 1;
+}
+
+
+message DataStringResponse {
+  string Data = 1;
+  string Error =2;
+}
+
+message DataStringsResponse {
+  repeated string Data = 1;
+}
+
+message DatabaseGetAllResult {
+  repeated string Data = 1;
+  string Error = 2;
+}
+
+message NoRequestBody {
+}
+
+message CollectionCreateRequest {
+  string DatabaseName = 1;
+  repeated CollectionInput Collections = 2;
+}
+
+
+message CollectionDeleteRequest {
+  string DatabaseName = 1;
+  repeated string Collections = 2;
+}
+
+message CollectionInput {
+  string CollectionName = 1;
+  repeated string IndexKeys = 2;
+}
+
+
+message CollectionGetAllRequest {
+  string DatabaseName = 1;
+}
+
+message CollectionGetAllResult {
+  repeated string Data = 1;
+  string Error = 2;
+}
+
+
+message CollectionStatsRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+}
+
+message CollectionStatsResponse {
+  CollectionStats Data = 1;
+  string Error = 2;
+
+}
+
+message CollectionStats  {
+	string CollectionName = 1;
+  repeated string IndexKeys= 2;
+	int32 Documents = 3;
+}
+
+service GnoSQLService {
+  rpc CreateNewDatabase(DatabaseCreateRequest) returns (DataStringResponse);
+  rpc DeleteDatabase(DatabaseDeleteRequest) returns (DataStringResponse);
+  rpc GetAllDatabases(NoRequestBody) returns (DatabaseGetAllResult);
+  rpc LoadToDisk(NoRequestBody) returns (DataStringResponse);
+  rpc CreateNewCollection(CollectionCreateRequest) returns (DataStringResponse);
+  rpc DeleteCollections(CollectionDeleteRequest) returns (DataStringResponse);
+  rpc GetAllCollections(CollectionGetAllRequest) returns (CollectionGetAllResult);
+  rpc GetCollectionStats(CollectionStatsRequest) returns (CollectionStatsResponse);
+  
+}

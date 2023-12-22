@@ -19,16 +19,25 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	docs "gnosql/docs"
+	pb "gnosql/proto"
+	"gnosql/src/grpc_handler"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/router"
 	"gnosql/src/utils"
+	"log"
+	"net"
 	"os"
-	"os/signal"
-	"syscall"
+
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"google.golang.org/grpc"
+)
+
+const (
+	// Port for gRPC server to listen to
+	PORT = ":50051"
 )
 
 // @BasePath /api/v1
@@ -60,33 +69,25 @@ func main() {
 		}
 	}()
 
-	// Handle signals for cleanup before application stops
-	handleSignals()
+	go func() {
+		lis, err := net.Listen("tcp", PORT)
+
+		if err != nil {
+			log.Fatalf("failed connection: %v", err)
+		}
+
+		s := grpc.NewServer()
+
+		pb.RegisterGnoSQLServiceServer(s, &grpc_handler.GnoSQLServer{GnoSQL: gnoSQL})
+
+		log.Printf("server listening at %v", lis.Addr())
+
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to server: %v", err)
+		}
+	}()
 
 	// Ensure the main goroutine doesn't exit immediately
 	select {}
-}
 
-func handleSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		// Wait for a signal
-		sig := <-c
-		fmt.Printf("\nReceived signal: %v\n", sig)
-
-		// Perform cleanup or specific logic before the application stops
-		cleanup()
-
-		// Exit the application
-		os.Exit(1)
-	}()
-}
-
-func cleanup() {
-	// Add your cleanup logic here
-	// This function will be executed when the application receives a signal
-	fmt.Println("Performing cleanup before application stops...")
-	// Example: Close database connections, save state, etc.
 }

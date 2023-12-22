@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type Result struct {
+	Data  interface{}
+	Error interface{}
+}
+
 type GnoSQL struct {
 	Databases []*Database
 }
