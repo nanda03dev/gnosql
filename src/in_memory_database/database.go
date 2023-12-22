@@ -84,15 +84,17 @@ func (db *Database) CreateColls(collectionsInput []CollectionInput) []*Collectio
 }
 
 func (db *Database) DeleteColls(collectionNamesToDelete []string) *Database {
-	var Collections []*Collection
+	var Collections []*Collection = make([]*Collection, 0)
 
-	for _, collectionNameToDelete := range collectionNamesToDelete {
-		for _, collection := range db.Collections {
-			if collectionNameToDelete != collection.CollectionName {
-				Collections = append(Collections, collection)
-			} else {
-				collection.DeleteCollection()
+	for _, collection := range db.Collections {
+		check := false
+		for _, collectionNameToDelete := range collectionNamesToDelete {
+			if collectionNameToDelete == collection.CollectionName {
+				check = true
 			}
+		}
+		if !check {
+			Collections = append(Collections, collection)
 		}
 	}
 

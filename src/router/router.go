@@ -11,30 +11,30 @@ import (
 )
 
 func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	// Middleware to capture DatabaseName and store it in the context
-	router.Use(func(c *gin.Context) {
-		DatabaseName := c.Param("DatabaseName")
-		CollectionName := c.Param("CollectionName")
+	// // Middleware to capture DatabaseName and store it in the context
+	// router.Use(func(c *gin.Context) {
+	// 	DatabaseName := c.Param("DatabaseName")
+	// 	CollectionName := c.Param("CollectionName")
 
-		if len(DatabaseName) > 0 {
-			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
+	// 	if len(DatabaseName) > 0 {
+	// 		var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
 
-			if db == nil {
-				c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-				return
-			}
+	// 		if db == nil {
+	// 			c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
+	// 			return
+	// 		}
 
-			if len(CollectionName) > 0 {
-				var collection *in_memory_database.Collection = db.GetColl(CollectionName)
-				if collection == nil {
-					c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-					return
-				}
+	// 		if len(CollectionName) > 0 {
+	// 			var collection *in_memory_database.Collection = db.GetColl(CollectionName)
+	// 			if collection == nil {
+	// 				c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
+	// 				return
+	// 			}
 
-			}
-		}
-		c.Next()
-	})
+	// 		}
+	// 	}
+	// 	c.Next()
+	// })
 
 	SeedRoute(router, gnoSQL)
 	DatabaseRoutes(router, gnoSQL)
@@ -90,28 +90,20 @@ func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	CollectionRoutesGroup := router.Group(path)
 	{
 		CollectionRoutesGroup.POST("/add", func(c *gin.Context) {
-			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
-
-			handler.CreateCollection(c, db)
+			handler.CreateCollection(c, gnoSQL)
 		})
 
 		CollectionRoutesGroup.DELETE("/delete", func(c *gin.Context) {
-			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
-			handler.DeleteCollection(c, db)
+			handler.DeleteCollection(c, gnoSQL)
 		})
 
 		CollectionRoutesGroup.GET("/get-all", func(c *gin.Context) {
-			DatabaseName := c.Param("DatabaseName")
-			var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
-			handler.GetAllCollections(c, db)
+			handler.GetAllCollections(c, gnoSQL)
 		})
 
 		// Get collection stats
 		CollectionRoutesGroup.GET("/:CollectionName/stats", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.CollectionStats(c, db, collection)
+			handler.CollectionStats(c, gnoSQL)
 		})
 	}
 

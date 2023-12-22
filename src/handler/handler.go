@@ -2,10 +2,13 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"gnosql/src/in_memory_database"
+	"gnosql/src/service"
 	"gnosql/src/utils"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -18,27 +21,23 @@ import (
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var value in_memory_database.MapInterface
+	var result = in_memory_database.DatabaseCreateResult{}
 
 	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	databaseName := value["DatabaseName"].(string)
-	collectionsInterface := make([]interface{}, 0)
+	CollectionsInterface := make([]interface{}, 0)
 
 	if collections, exists := value["Collections"]; exists {
-		collectionsInterface = collections.([]interface{})
+		CollectionsInterface = collections.([]interface{})
 	}
 
-	if dbExists := gnoSQL.GetDB(databaseName); dbExists != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Database already exists"})
-		return
-	}
+	result = service.ServiceCreateDatabase(gnoSQL, value["DatabaseName"].(string), in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
-	gnoSQL.CreateDB(databaseName, in_memory_database.ConvertToCollectionInputs(collectionsInterface))
-
-	c.JSON(http.StatusCreated, gin.H{"Data": "database created successfully"})
+	c.JSON(http.StatusCreated, result)
 }
 
 // @Summary      Delete database
@@ -50,23 +49,19 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "Unexpected error while delete database"
 // @Router       /database/delete [post]
 func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var value map[string]interface{}
+	var value map[string]string
+
+	var result = in_memory_database.DatabaseDeleteResult{}
 
 	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	db := gnoSQL.GetDB(value["DatabaseName"].(string))
+	result = service.ServiceDeleteDatabase(gnoSQL, value["DatabaseName"])
 
-	if db == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "Unexpected error while delete database"})
-		return
-	}
-
-	gnoSQL.DeleteDB(db)
-
-	c.JSON(http.StatusOK, gin.H{"Data": "database deleted successfully"})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Get all database
@@ -76,15 +71,11 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/get-all [get]
 func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	// Fetch all data from the database
-	databaseNames := make([]string, 0)
 
-	for _, database := range gnoSQL.Databases {
-		databaseNames = append(databaseNames, database.DatabaseName)
-	}
+	result := service.ServiceGetAllDatabase(gnoSQL)
 
 	// Send the JSON response
-	c.JSON(http.StatusOK, gin.H{"Data": databaseNames})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Load database to disk
@@ -94,8 +85,9 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	go gnoSQL.WriteAllDBs()
-	c.JSON(http.StatusOK, gin.H{"status": "database to file disk started."})
+	result := service.ServiceLoadToDisk(gnoSQL)
+
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Create new collection
@@ -107,18 +99,20 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 "collection created successfully"
 // @Success      400 "collection already exists"
 // @Router       /collection/{databaseName}/add [post]
-func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
-
+func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var CollectionsInterface []interface{}
+	var result = in_memory_database.CollectionCreateResult{}
 
 	if err := c.BindJSON(&CollectionsInterface); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	db.CreateColls(in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
+	result = service.ServiceCreateCollections(gnoSQL, c.Param("DatabaseName"),
+		in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
 
-	c.JSON(http.StatusCreated, gin.H{"Data": utils.COLLECTION_CREATE_SUCCESS_MSG})
+	c.JSON(http.StatusCreated, result)
 }
 
 // @Summary      Delete collection
@@ -130,21 +124,20 @@ func CreateCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Success      200 "collection deleted successfully"
 // @Success      400 "Unexpected error while delete collection"
 // @Router       /collection/{databaseName}/delete [post]
-func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
+func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
 	var value map[string][]string
+	var result = in_memory_database.CollectionDeleteResult{}
 
 	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	// var indexKeys = make([]string, 0)
-	if collections, ok := value["Collections"]; ok {
-		db.DeleteColls(collections)
-	}
+	result = service.ServiceDeleteCollections(gnoSQL, c.Param("DatabaseName"), value["Collections"])
 
-	c.JSON(http.StatusOK, gin.H{"Data": "collection successfully deleted"})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Get all collections
@@ -154,18 +147,11 @@ func DeleteCollection(c *gin.Context, db *in_memory_database.Database) {
 // @Param        databaseName  path      string  true  "databaseName"
 // @Success      200 {array} string
 // @Router       /collection/{databaseName}/get-all [get]
-func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
+func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	// Fetch all data from the database
-	allCollections := db.Collections
-	collections := make([]string, 0)
-
-	for _, collection := range allCollections {
-		collections = append(collections, collection.CollectionName)
-	}
-
+	result := service.ServiceGetAllCollections(gnoSQL, c.Param("DatabaseName"))
 	// Send the JSON response
-	c.JSON(http.StatusOK, gin.H{"Data": collections})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Collection stats
@@ -177,9 +163,11 @@ func GetAllCollections(c *gin.Context, db *in_memory_database.Database) {
 // @Success      200 {object}  in_memory_database.IndexMap
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /collection/{databaseName}/{collectionName}/stats [get]
-func CollectionStats(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	// Send the JSON response
-	c.JSON(http.StatusOK, gin.H{"Data": collection.Stats()})
+func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	result := service.ServiceGetCollectionStats(gnoSQL, c.Param("DatabaseName"), c.Param("CollectionName"))
+
+	c.JSON(http.StatusOK, result)
+
 }
 
 // @Summary      Create new document
@@ -338,6 +326,7 @@ func ReadAllDocument(c *gin.Context, db *in_memory_database.Database, collection
 
 	// Serialize data to JSON
 	responseData, _ := json.Marshal(allData)
+	fmt.Printf("\n value  \n")
 
 	// Send the JSON response
 	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	pb "gnosql/proto"
 	"gnosql/src/in_memory_database"
+	"gnosql/src/service"
 	"gnosql/src/utils"
 	"net/http"
 )
@@ -17,123 +18,71 @@ type GnoSQLServer struct {
 }
 
 func (s *GnoSQLServer) CreateNewDatabase(ctx context.Context, req *pb.DatabaseCreateRequest) (*pb.DataStringResponse, error) {
-	response := &pb.DataStringResponse{
-		Data: "Database successfully created",
-	}
+	response := &pb.DataStringResponse{}
 
-	db := s.GnoSQL.GetDB(req.DatabaseName)
+	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
 
-	if db != nil {
-		response.Data = ""
-		response.Error = "Database already exists"
-		return response, nil
-	}
+	result := service.ServiceCreateDatabase(s.GnoSQL, req.DatabaseName, collectionsInput)
 
-	var collectionsInput []in_memory_database.CollectionInput
-
-	for _, EachInput := range req.Collections {
-		collectionInput := in_memory_database.CollectionInput{
-			CollectionName: EachInput.CollectionName,
-			IndexKeys:      EachInput.GetIndexKeys(),
-		}
-		collectionsInput = append(collectionsInput, collectionInput)
-	}
-
-	s.GnoSQL.CreateDB(req.DatabaseName, collectionsInput)
-
+	response.Data = result.Data
+	response.Error = result.Error
 	return response, nil
 
 }
 
 func (s *GnoSQLServer) DeleteDatabase(ctx context.Context, req *pb.DatabaseDeleteRequest) (*pb.DataStringResponse, error) {
 
-	var response = &pb.DataStringResponse{
-		Data: "Database deleted successfully",
-	}
+	var response = &pb.DataStringResponse{}
 
-	db := s.GnoSQL.GetDB(req.DatabaseName)
+	result := service.ServiceDeleteDatabase(s.GnoSQL, req.DatabaseName)
 
-	if db == nil {
-		response.Error = "Database not found"
-		return response, nil
-	}
-
-	s.GnoSQL.DeleteDB(db)
-
+	response.Data = result.Data
+	response.Error = result.Error
 	return response, nil
 }
 
 func (s *GnoSQLServer) GetAllDatabases(ctx context.Context, req *pb.NoRequestBody) (*pb.DatabaseGetAllResult, error) {
-	// Implement the logic similar to your HTTP handler
-	databaseNames := make([]string, 0)
+	var response = &pb.DatabaseGetAllResult{}
 
-	for _, database := range s.GnoSQL.Databases {
-		databaseNames = append(databaseNames, database.DatabaseName)
-	}
+	result := service.ServiceGetAllDatabase(s.GnoSQL)
 
-	response := &pb.DatabaseGetAllResult{
-		Data: databaseNames,
-	}
+	response.Data = result.Data
+	response.Error = result.Error
 
 	return response, nil
 }
 
 func (s *GnoSQLServer) LoadToDisk(ctx context.Context, req *pb.NoRequestBody) (*pb.DataStringResponse, error) {
+	var response = &pb.DataStringResponse{}
 
-	go s.GnoSQL.WriteAllDBs()
+	result := service.ServiceLoadToDisk(s.GnoSQL)
 
-	response := &pb.DataStringResponse{
-		Data: "database to file disk started.",
-	}
+	response.Data = result.Data
+	response.Error = result.Error
 
 	return response, nil
 }
 
 func (s *GnoSQLServer) CreateNewCollection(ctx context.Context, req *pb.CollectionCreateRequest) (*pb.DataStringResponse, error) {
+	response := &pb.DataStringResponse{}
 
-	response := &pb.DataStringResponse{
-		Data: utils.COLLECTION_CREATE_SUCCESS_MSG,
-	}
+	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
+	result := service.ServiceCreateCollections(s.GnoSQL, req.DatabaseName, collectionsInput)
 
-	if db == nil {
-		response.Data = ""
-		response.Error = "Database not found"
-		return response, nil
-	}
-
-	var collectionsInput []in_memory_database.CollectionInput
-
-	for _, EachInput := range req.Collections {
-		collectionInput := in_memory_database.CollectionInput{
-			CollectionName: EachInput.CollectionName,
-			IndexKeys:      EachInput.GetIndexKeys(),
-		}
-		collectionsInput = append(collectionsInput, collectionInput)
-	}
-
-	db.CreateColls(collectionsInput)
+	response.Data = result.Data
+	response.Error = result.Error
 
 	return response, nil
-
 }
 
 func (s *GnoSQLServer) DeleteCollections(ctx context.Context, req *pb.CollectionDeleteRequest) (*pb.DataStringResponse, error) {
+	response := &pb.DataStringResponse{}
 
-	response := &pb.DataStringResponse{
-		Data: utils.COLLECTION_DELETE_SUCCESS_MSG,
-	}
+	result := service.ServiceDeleteCollections(s.GnoSQL, req.DatabaseName, req.GetCollections())
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
-
-	if db == nil {
-		response.Data = ""
-		response.Error = "Database not found"
-		return response, nil
-	}
-
-	db.DeleteColls(req.GetCollections())
+	response.Data = result.Data
+	response.Error = result.Error
 
 	return response, nil
 
@@ -143,22 +92,10 @@ func (s *GnoSQLServer) GetAllCollections(ctx context.Context, req *pb.Collection
 
 	response := &pb.CollectionGetAllResult{}
 
-	var db *in_memory_database.Database = s.GnoSQL.GetDB(req.DatabaseName)
+	result := service.ServiceGetAllCollections(s.GnoSQL, req.DatabaseName)
 
-	if db == nil {
-		response.Error = "Database not found"
-		return response, nil
-	}
-
-	allCollections := db.Collections
-
-	collections := make([]string, 0)
-
-	for _, collection := range allCollections {
-		collections = append(collections, collection.CollectionName)
-	}
-
-	response.Data = collections
+	response.Data = result.Data
+	response.Error = result.Error
 
 	return response, nil
 }
@@ -167,25 +104,15 @@ func (s *GnoSQLServer) GetCollectionStats(ctx context.Context, req *pb.Collectio
 
 	response := &pb.CollectionStatsResponse{}
 
-	db, collection := s.GnoSQL.GetDatabaseAndCollection(req.DatabaseName, req.CollectionName)
-
-	if db == nil {
-		response.Error = "Database not found"
-		return response, nil
-	}
-
-	if collection == nil {
-		response.Error = "Collection not found"
-		return response, nil
-	}
-
-	stats := collection.Stats()
+	result := service.ServiceGetCollectionStats(s.GnoSQL, req.DatabaseName, req.CollectionName)
 
 	response.Data = &pb.CollectionStats{
-		CollectionName: stats.CollectionName,
-		IndexKeys:      stats.IndexKeys,
-		Documents:      int32(stats.Documents),
+		CollectionName: result.Data.CollectionName,
+		IndexKeys:      result.Data.IndexKeys,
+		Documents:      int32(result.Data.Documents),
 	}
+
+	response.Error = result.Error
 
 	return response, nil
 }
@@ -443,4 +370,19 @@ func ReadAllDocument(c *gin.Context, db *in_memory_database.Database, collection
 
 	// Send the JSON response
 	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
+}
+
+func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_database.CollectionInput {
+
+	var collectionsInput []in_memory_database.CollectionInput
+
+	for _, EachInput := range collections {
+		collectionInput := in_memory_database.CollectionInput{
+			CollectionName: EachInput.CollectionName,
+			IndexKeys:      EachInput.IndexKeys,
+		}
+		collectionsInput = append(collectionsInput, collectionInput)
+	}
+
+	return collectionsInput
 }
