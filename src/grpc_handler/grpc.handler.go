@@ -227,6 +227,26 @@ func (s *GnoSQLServer) DeleteDocument(ctx context.Context, req *pb.DocumentDelet
 	return response, nil
 }
 
+func (s *GnoSQLServer) GetAllDocuments(ctx context.Context, req *pb.DocumentGetAllRequest) (*pb.DocumentGetAllResponse, error) {
+	response := &pb.DocumentGetAllResponse{}
+
+	fmt.Printf("\n req %v \n ", req)
+
+	result := service.ServiceDocumentGetAll(s.GnoSQL, req.DatabaseName, req.CollectionName)
+	fmt.Printf("\n result %v \n ", result)
+
+	responseDataString, MarshalErr := json.Marshal(result.Data)
+
+	if MarshalErr != nil {
+		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
+		return response, nil
+	}
+
+	response.Data = string(responseDataString)
+	response.Error = result.Error
+
+	return response, nil
+}
 func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_database.CollectionInput {
 	fmt.Printf("ConvertReqToCollectionInput")
 

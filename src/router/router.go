@@ -11,31 +11,6 @@ import (
 )
 
 func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	// // Middleware to capture DatabaseName and store it in the context
-	// router.Use(func(c *gin.Context) {
-	// 	DatabaseName := c.Param("DatabaseName")
-	// 	CollectionName := c.Param("CollectionName")
-
-	// 	if len(DatabaseName) > 0 {
-	// 		var db *in_memory_database.Database = gnoSQL.GetDB(DatabaseName)
-
-	// 		if db == nil {
-	// 			c.JSON(http.StatusBadRequest, gin.H{"message": "database not found"})
-	// 			return
-	// 		}
-
-	// 		if len(CollectionName) > 0 {
-	// 			var collection *in_memory_database.Collection = db.GetColl(CollectionName)
-	// 			if collection == nil {
-	// 				c.JSON(http.StatusBadRequest, gin.H{"message": "collection not found"})
-	// 				return
-	// 			}
-
-	// 		}
-	// 	}
-	// 	c.Next()
-	// })
-
 	SeedRoute(router, gnoSQL)
 	DatabaseRoutes(router, gnoSQL)
 	CollectionRoutes(router, gnoSQL)
@@ -141,8 +116,7 @@ func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 		// Get all data
 		DocumentRoutesGroup.GET("/all-data", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.ReadAllDocument(c, db, collection)
+			handler.ReadAllDocument(c, gnoSQL)
 		})
 	}
 

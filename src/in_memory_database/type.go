@@ -73,3 +73,9 @@ type DocumentDeleteResult struct {
 	Data  string
 	Error string
 }
+
+
+type DocumentGetAllResult struct {
+	Data  []Document
+	Error string
+}

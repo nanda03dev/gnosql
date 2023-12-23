@@ -1,14 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
 	"gnosql/src/utils"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -298,15 +295,10 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/all-data [get]
-func ReadAllDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
+func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	// Fetch all data from the database
-	allData := collection.GetAllData()
+	result := service.ServiceDocumentGetAll(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"))
 
-	// Serialize data to JSON
-	responseData, _ := json.Marshal(allData)
-	fmt.Printf("\n value  \n")
-
-	// Send the JSON response
-	c.Data(http.StatusOK, "application/json; charset=utf-8", responseData)
+	c.JSON(http.StatusOK, result)
 }

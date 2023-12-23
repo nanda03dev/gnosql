@@ -307,3 +307,27 @@ func ServiceDocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 
 	return result
 }
+
+func ServiceDocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string) in_memory_database.DocumentGetAllResult {
+
+	var result = in_memory_database.DocumentGetAllResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	documents := collection.GetAllData()
+
+	result.Data = documents
+
+	return result
+}
