@@ -30,5 +30,8 @@ var COLLECTION_DELETE_SUCCESS_MSG = "Collection deleted successfully"
 var COLLECTION_NOT_FOUND_MSG = "Collection not found "
 
 var DOCUMENT_DELETE_SUCCESS_MSG = "Document deleted successfully"
+var DOCUMENT_NOT_FOUND_MSG = "Document not found"
 
 var ERROR_WHILE_BINDING_JSON = "Request JSON binding failed"
+var ERROR_WHILE_UNMARSHAL_JSON = "Request JSON Unmarhsall failed"
+var ERROR_WHILE_MARSHAL_JSON = "Request JSON Marhsall failed"

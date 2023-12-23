@@ -4,42 +4,36 @@ package proto;
 
 option go_package = "gnosql/proto";
 
+message NoRequestBody {
+}
+
 message DatabaseCreateRequest {
   string DatabaseName = 1;
   repeated CollectionInput Collections = 2;
+}
+
+message DatabaseCreateResponse {
+  string Data = 1;
+  string Error = 2;
 }
 
 message DatabaseDeleteRequest {
   string DatabaseName = 1;
 }
 
-
-message DataStringResponse {
+message DatabaseDeleteResponse {
   string Data = 1;
-  string Error =2;
+  string Error = 2;
 }
 
-message DataStringsResponse {
-  repeated string Data = 1;
-}
-
-message DatabaseGetAllResult {
+message DatabaseGetAllResponse {
   repeated string Data = 1;
   string Error = 2;
 }
 
-message NoRequestBody {
-}
-
-message CollectionCreateRequest {
-  string DatabaseName = 1;
-  repeated CollectionInput Collections = 2;
-}
-
-
-message CollectionDeleteRequest {
-  string DatabaseName = 1;
-  repeated string Collections = 2;
+message LoadToDiskResponse {
+  string Data = 1;
+  string Error = 2;
 }
 
 message CollectionInput {
@@ -47,16 +41,34 @@ message CollectionInput {
   repeated string IndexKeys = 2;
 }
 
+message CollectionCreateRequest {
+  string DatabaseName = 1;
+  repeated CollectionInput Collections = 2;
+}
+
+message CollectionCreateResponse {
+  string Data = 1;
+  string Error = 2;
+}
+
+message CollectionDeleteRequest {
+  string DatabaseName = 1;
+  repeated string Collections = 2;
+}
+
+message CollectionDeleteResponse {
+  string Data = 1;
+  string Error = 2;
+}
 
 message CollectionGetAllRequest {
   string DatabaseName = 1;
 }
 
-message CollectionGetAllResult {
+message CollectionGetAllResponse {
   repeated string Data = 1;
   string Error = 2;
 }
-
 
 message CollectionStatsRequest {
   string DatabaseName = 1;
@@ -131,16 +143,25 @@ message DocumentDeleteResponse {
   string Error = 2;
 }
 
+message DocumentGetAllRequest {
+  string DatabaseName = 1;
+  string CollectionName = 2;
+}
+
+message DocumentGetAllResponse {
+  string Data = 1;
+  string Error = 2;
+}
 
 service GnoSQLService {
-  rpc CreateNewDatabase(DatabaseCreateRequest) returns (DataStringResponse);
-  rpc DeleteDatabase(DatabaseDeleteRequest) returns (DataStringResponse);
-  rpc GetAllDatabases(NoRequestBody) returns (DatabaseGetAllResult);
-  rpc LoadToDisk(NoRequestBody) returns (DataStringResponse);
+  rpc CreateNewDatabase(DatabaseCreateRequest) returns (DatabaseCreateResponse);
+  rpc DeleteDatabase(DatabaseDeleteRequest) returns (DatabaseDeleteResponse);
+  rpc GetAllDatabases(NoRequestBody) returns (DatabaseGetAllResponse);
+  rpc LoadToDisk(NoRequestBody) returns (LoadToDiskResponse);
 
-  rpc CreateNewCollection(CollectionCreateRequest) returns (DataStringResponse);
-  rpc DeleteCollections(CollectionDeleteRequest) returns (DataStringResponse);
-  rpc GetAllCollections(CollectionGetAllRequest) returns (CollectionGetAllResult);
+  rpc CreateNewCollection(CollectionCreateRequest) returns (CollectionCreateResponse);
+  rpc DeleteCollections(CollectionDeleteRequest) returns (CollectionDeleteResponse);
+  rpc GetAllCollections(CollectionGetAllRequest) returns (CollectionGetAllResponse);
   rpc GetCollectionStats(CollectionStatsRequest) returns (CollectionStatsResponse);
 
   rpc CreateDocument(DocumentCreateRequest) returns (DocumentCreateResponse);
@@ -148,5 +169,5 @@ service GnoSQLService {
   rpc FilterDocument(DocumentFilterRequest) returns (DocumentFilterResponse);
   rpc UpdateDocument(DocumentUpdateRequest) returns (DocumentUpdateResponse);
   rpc DeleteDocument(DocumentDeleteRequest) returns (DocumentDeleteResponse);
-  
+  rpc GetAllDocuments(DocumentGetAllRequest) returns (DocumentGetAllResponse); 
 }

@@ -48,3 +48,28 @@ type CollectionStatsResult struct {
 	Data  CollectionStats
 	Error string
 }
+
+type DocumentCreateResult struct {
+	Data  Document
+	Error string
+}
+
+type DocumentReadResult struct {
+	Data  Document
+	Error string
+}
+
+type DocumentFilterResult struct {
+	Data  []Document
+	Error string
+}
+
+type DocumentUpdateResult struct {
+	Data  Document
+	Error string
+}
+
+type DocumentDeleteResult struct {
+	Data  string
+	Error string
+}

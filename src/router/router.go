@@ -116,32 +116,27 @@ func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	{
 		// Create
 		DocumentRoutesGroup.POST("/", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.CreateDocument(c, db, collection)
+			handler.CreateDocument(c, gnoSQL)
 		})
 
 		// Read
 		DocumentRoutesGroup.GET("/:id", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.ReadDocument(c, db, collection)
+			handler.ReadDocument(c, gnoSQL)
 		})
 
 		// Read by index
 		DocumentRoutesGroup.POST("/filter", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.FilterDocument(c, db, collection)
+			handler.FilterDocument(c, gnoSQL)
 		})
 
 		// Update
 		DocumentRoutesGroup.PUT("/:id", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.UpdateDocument(c, db, collection)
+			handler.UpdateDocument(c, gnoSQL)
 		})
 
 		// Delete
 		DocumentRoutesGroup.DELETE("/:id", func(c *gin.Context) {
-			db, collection := gnoSQL.GetDatabaseAndCollection(c.Param("DatabaseName"), c.Param("CollectionName"))
-			handler.DeleteDocument(c, db, collection)
+			handler.DeleteDocument(c, gnoSQL)
 		})
 
 		// Get all data

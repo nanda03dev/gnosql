@@ -180,26 +180,22 @@ func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 "Document created successfully"
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/ [post]
-func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
+func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	var value in_memory_database.Document
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var document in_memory_database.Document
+
+	var result = in_memory_database.DocumentCreateResult{}
+
+	if err := c.BindJSON(&document); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	uniqueUuid := utils.Generate16DigitUUID()
+	result = service.ServiceDocumentCreate(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"), document)
 
-	value["id"] = uniqueUuid
-
-	var createEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_CREATE,
-		EventData: value,
-	}
-
-	collection.EventChannel <- createEvent
-
-	c.JSON(http.StatusCreated, gin.H{"Data": value})
+	c.JSON(http.StatusCreated, result)
 }
 
 // @Summary      Read by id
@@ -212,10 +208,12 @@ func CreateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      200 {object}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [get]
-func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	id := c.Param("id")
-	result := collection.Read(id)
-	c.JSON(http.StatusOK, gin.H{"Data": result})
+func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+
+	result := service.ServiceDocumentRead(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"), c.Param("id"))
+
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Filter document
@@ -228,17 +226,21 @@ func ReadDocument(c *gin.Context, db *in_memory_database.Database, collection *i
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/filter [post]
-func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	var value in_memory_database.MapInterface
+func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var filter in_memory_database.MapInterface
 
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var result = in_memory_database.DocumentFilterResult{}
+
+	if err := c.BindJSON(&filter); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result := collection.Filter(value)
+	result = service.ServiceDocumentFilter(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"), filter)
 
-	c.JSON(http.StatusOK, gin.H{"Data": result})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Update document
@@ -252,34 +254,21 @@ func FilterDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [put]
-func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	id := c.Param("id")
-	var value in_memory_database.Document
-	if err := c.BindJSON(&value); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var document in_memory_database.Document
+
+	var result = in_memory_database.DocumentUpdateResult{}
+
+	if err := c.BindJSON(&document); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	var existingDocument in_memory_database.Document = collection.Read(id)
+	result = service.ServiceDocumentUpdate(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"), c.Param("id"), document)
 
-	if existingDocument == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "document not found"})
-		return
-	}
-
-	for key, value := range value {
-		existingDocument[key] = value
-	}
-
-	var updateEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_UPDATE,
-		Id:        id,
-		EventData: existingDocument,
-	}
-
-	collection.EventChannel <- updateEvent
-
-	c.JSON(http.StatusOK, gin.H{"Data": existingDocument})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Delete document
@@ -292,22 +281,12 @@ func UpdateDocument(c *gin.Context, db *in_memory_database.Database, collection 
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [delete]
-func DeleteDocument(c *gin.Context, db *in_memory_database.Database, collection *in_memory_database.Collection) {
-	id := c.Param("id")
+func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	if err := collection.Read(id); err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": "document not found"})
-		return
-	}
+	result := service.ServiceDocumentDelete(gnoSQL, c.Param("DatabaseName"),
+		c.Param("CollectionName"), c.Param("id"))
 
-	var deleteEvent in_memory_database.Event = in_memory_database.Event{
-		Type: utils.EVENT_DELETE,
-		Id:   id,
-	}
-
-	collection.EventChannel <- deleteEvent
-
-	c.JSON(http.StatusOK, gin.H{"Data": "Data deleted successfully"})
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary      Read all document

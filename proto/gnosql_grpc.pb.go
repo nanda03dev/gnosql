@@ -22,19 +22,20 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GnoSQLServiceClient interface {
-	CreateNewDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DataStringResponse, error)
-	DeleteDatabase(ctx context.Context, in *DatabaseDeleteRequest, opts ...grpc.CallOption) (*DataStringResponse, error)
-	GetAllDatabases(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DatabaseGetAllResult, error)
-	LoadToDisk(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DataStringResponse, error)
-	CreateNewCollection(ctx context.Context, in *CollectionCreateRequest, opts ...grpc.CallOption) (*DataStringResponse, error)
-	DeleteCollections(ctx context.Context, in *CollectionDeleteRequest, opts ...grpc.CallOption) (*DataStringResponse, error)
-	GetAllCollections(ctx context.Context, in *CollectionGetAllRequest, opts ...grpc.CallOption) (*CollectionGetAllResult, error)
+	CreateNewDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DatabaseCreateResponse, error)
+	DeleteDatabase(ctx context.Context, in *DatabaseDeleteRequest, opts ...grpc.CallOption) (*DatabaseDeleteResponse, error)
+	GetAllDatabases(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DatabaseGetAllResponse, error)
+	LoadToDisk(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*LoadToDiskResponse, error)
+	CreateNewCollection(ctx context.Context, in *CollectionCreateRequest, opts ...grpc.CallOption) (*CollectionCreateResponse, error)
+	DeleteCollections(ctx context.Context, in *CollectionDeleteRequest, opts ...grpc.CallOption) (*CollectionDeleteResponse, error)
+	GetAllCollections(ctx context.Context, in *CollectionGetAllRequest, opts ...grpc.CallOption) (*CollectionGetAllResponse, error)
 	GetCollectionStats(ctx context.Context, in *CollectionStatsRequest, opts ...grpc.CallOption) (*CollectionStatsResponse, error)
 	CreateDocument(ctx context.Context, in *DocumentCreateRequest, opts ...grpc.CallOption) (*DocumentCreateResponse, error)
 	ReadDocument(ctx context.Context, in *DocumentReadRequest, opts ...grpc.CallOption) (*DocumentReadResponse, error)
 	FilterDocument(ctx context.Context, in *DocumentFilterRequest, opts ...grpc.CallOption) (*DocumentFilterResponse, error)
 	UpdateDocument(ctx context.Context, in *DocumentUpdateRequest, opts ...grpc.CallOption) (*DocumentUpdateResponse, error)
 	DeleteDocument(ctx context.Context, in *DocumentDeleteRequest, opts ...grpc.CallOption) (*DocumentDeleteResponse, error)
+	GetAllDocuments(ctx context.Context, in *DocumentGetAllRequest, opts ...grpc.CallOption) (*DocumentGetAllResponse, error)
 }
 
 type gnoSQLServiceClient struct {
@@ -45,8 +46,8 @@ func NewGnoSQLServiceClient(cc grpc.ClientConnInterface) GnoSQLServiceClient {
 	return &gnoSQLServiceClient{cc}
 }
 
-func (c *gnoSQLServiceClient) CreateNewDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DataStringResponse, error) {
-	out := new(DataStringResponse)
+func (c *gnoSQLServiceClient) CreateNewDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DatabaseCreateResponse, error) {
+	out := new(DatabaseCreateResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/CreateNewDatabase", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -54,8 +55,8 @@ func (c *gnoSQLServiceClient) CreateNewDatabase(ctx context.Context, in *Databas
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) DeleteDatabase(ctx context.Context, in *DatabaseDeleteRequest, opts ...grpc.CallOption) (*DataStringResponse, error) {
-	out := new(DataStringResponse)
+func (c *gnoSQLServiceClient) DeleteDatabase(ctx context.Context, in *DatabaseDeleteRequest, opts ...grpc.CallOption) (*DatabaseDeleteResponse, error) {
+	out := new(DatabaseDeleteResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/DeleteDatabase", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -63,8 +64,8 @@ func (c *gnoSQLServiceClient) DeleteDatabase(ctx context.Context, in *DatabaseDe
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) GetAllDatabases(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DatabaseGetAllResult, error) {
-	out := new(DatabaseGetAllResult)
+func (c *gnoSQLServiceClient) GetAllDatabases(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DatabaseGetAllResponse, error) {
+	out := new(DatabaseGetAllResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/GetAllDatabases", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -72,8 +73,8 @@ func (c *gnoSQLServiceClient) GetAllDatabases(ctx context.Context, in *NoRequest
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) LoadToDisk(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DataStringResponse, error) {
-	out := new(DataStringResponse)
+func (c *gnoSQLServiceClient) LoadToDisk(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*LoadToDiskResponse, error) {
+	out := new(LoadToDiskResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/LoadToDisk", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -81,8 +82,8 @@ func (c *gnoSQLServiceClient) LoadToDisk(ctx context.Context, in *NoRequestBody,
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) CreateNewCollection(ctx context.Context, in *CollectionCreateRequest, opts ...grpc.CallOption) (*DataStringResponse, error) {
-	out := new(DataStringResponse)
+func (c *gnoSQLServiceClient) CreateNewCollection(ctx context.Context, in *CollectionCreateRequest, opts ...grpc.CallOption) (*CollectionCreateResponse, error) {
+	out := new(CollectionCreateResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/CreateNewCollection", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -90,8 +91,8 @@ func (c *gnoSQLServiceClient) CreateNewCollection(ctx context.Context, in *Colle
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) DeleteCollections(ctx context.Context, in *CollectionDeleteRequest, opts ...grpc.CallOption) (*DataStringResponse, error) {
-	out := new(DataStringResponse)
+func (c *gnoSQLServiceClient) DeleteCollections(ctx context.Context, in *CollectionDeleteRequest, opts ...grpc.CallOption) (*CollectionDeleteResponse, error) {
+	out := new(CollectionDeleteResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/DeleteCollections", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -99,8 +100,8 @@ func (c *gnoSQLServiceClient) DeleteCollections(ctx context.Context, in *Collect
 	return out, nil
 }
 
-func (c *gnoSQLServiceClient) GetAllCollections(ctx context.Context, in *CollectionGetAllRequest, opts ...grpc.CallOption) (*CollectionGetAllResult, error) {
-	out := new(CollectionGetAllResult)
+func (c *gnoSQLServiceClient) GetAllCollections(ctx context.Context, in *CollectionGetAllRequest, opts ...grpc.CallOption) (*CollectionGetAllResponse, error) {
+	out := new(CollectionGetAllResponse)
 	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/GetAllCollections", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -162,23 +163,33 @@ func (c *gnoSQLServiceClient) DeleteDocument(ctx context.Context, in *DocumentDe
 	return out, nil
 }
 
+func (c *gnoSQLServiceClient) GetAllDocuments(ctx context.Context, in *DocumentGetAllRequest, opts ...grpc.CallOption) (*DocumentGetAllResponse, error) {
+	out := new(DocumentGetAllResponse)
+	err := c.cc.Invoke(ctx, "/proto.GnoSQLService/GetAllDocuments", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GnoSQLServiceServer is the server API for GnoSQLService service.
 // All implementations must embed UnimplementedGnoSQLServiceServer
 // for forward compatibility
 type GnoSQLServiceServer interface {
-	CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DataStringResponse, error)
-	DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DataStringResponse, error)
-	GetAllDatabases(context.Context, *NoRequestBody) (*DatabaseGetAllResult, error)
-	LoadToDisk(context.Context, *NoRequestBody) (*DataStringResponse, error)
-	CreateNewCollection(context.Context, *CollectionCreateRequest) (*DataStringResponse, error)
-	DeleteCollections(context.Context, *CollectionDeleteRequest) (*DataStringResponse, error)
-	GetAllCollections(context.Context, *CollectionGetAllRequest) (*CollectionGetAllResult, error)
+	CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseCreateResponse, error)
+	DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DatabaseDeleteResponse, error)
+	GetAllDatabases(context.Context, *NoRequestBody) (*DatabaseGetAllResponse, error)
+	LoadToDisk(context.Context, *NoRequestBody) (*LoadToDiskResponse, error)
+	CreateNewCollection(context.Context, *CollectionCreateRequest) (*CollectionCreateResponse, error)
+	DeleteCollections(context.Context, *CollectionDeleteRequest) (*CollectionDeleteResponse, error)
+	GetAllCollections(context.Context, *CollectionGetAllRequest) (*CollectionGetAllResponse, error)
 	GetCollectionStats(context.Context, *CollectionStatsRequest) (*CollectionStatsResponse, error)
 	CreateDocument(context.Context, *DocumentCreateRequest) (*DocumentCreateResponse, error)
 	ReadDocument(context.Context, *DocumentReadRequest) (*DocumentReadResponse, error)
 	FilterDocument(context.Context, *DocumentFilterRequest) (*DocumentFilterResponse, error)
 	UpdateDocument(context.Context, *DocumentUpdateRequest) (*DocumentUpdateResponse, error)
 	DeleteDocument(context.Context, *DocumentDeleteRequest) (*DocumentDeleteResponse, error)
+	GetAllDocuments(context.Context, *DocumentGetAllRequest) (*DocumentGetAllResponse, error)
 	mustEmbedUnimplementedGnoSQLServiceServer()
 }
 
@@ -186,25 +197,25 @@ type GnoSQLServiceServer interface {
 type UnimplementedGnoSQLServiceServer struct {
 }
 
-func (UnimplementedGnoSQLServiceServer) CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DataStringResponse, error) {
+func (UnimplementedGnoSQLServiceServer) CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseCreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNewDatabase not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DataStringResponse, error) {
+func (UnimplementedGnoSQLServiceServer) DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DatabaseDeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteDatabase not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) GetAllDatabases(context.Context, *NoRequestBody) (*DatabaseGetAllResult, error) {
+func (UnimplementedGnoSQLServiceServer) GetAllDatabases(context.Context, *NoRequestBody) (*DatabaseGetAllResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllDatabases not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) LoadToDisk(context.Context, *NoRequestBody) (*DataStringResponse, error) {
+func (UnimplementedGnoSQLServiceServer) LoadToDisk(context.Context, *NoRequestBody) (*LoadToDiskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoadToDisk not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) CreateNewCollection(context.Context, *CollectionCreateRequest) (*DataStringResponse, error) {
+func (UnimplementedGnoSQLServiceServer) CreateNewCollection(context.Context, *CollectionCreateRequest) (*CollectionCreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNewCollection not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) DeleteCollections(context.Context, *CollectionDeleteRequest) (*DataStringResponse, error) {
+func (UnimplementedGnoSQLServiceServer) DeleteCollections(context.Context, *CollectionDeleteRequest) (*CollectionDeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteCollections not implemented")
 }
-func (UnimplementedGnoSQLServiceServer) GetAllCollections(context.Context, *CollectionGetAllRequest) (*CollectionGetAllResult, error) {
+func (UnimplementedGnoSQLServiceServer) GetAllCollections(context.Context, *CollectionGetAllRequest) (*CollectionGetAllResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllCollections not implemented")
 }
 func (UnimplementedGnoSQLServiceServer) GetCollectionStats(context.Context, *CollectionStatsRequest) (*CollectionStatsResponse, error) {
@@ -224,6 +235,9 @@ func (UnimplementedGnoSQLServiceServer) UpdateDocument(context.Context, *Documen
 }
 func (UnimplementedGnoSQLServiceServer) DeleteDocument(context.Context, *DocumentDeleteRequest) (*DocumentDeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteDocument not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) GetAllDocuments(context.Context, *DocumentGetAllRequest) (*DocumentGetAllResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllDocuments not implemented")
 }
 func (UnimplementedGnoSQLServiceServer) mustEmbedUnimplementedGnoSQLServiceServer() {}
 
@@ -472,6 +486,24 @@ func _GnoSQLService_DeleteDocument_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GnoSQLService_GetAllDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentGetAllRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).GetAllDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.GnoSQLService/GetAllDocuments",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).GetAllDocuments(ctx, req.(*DocumentGetAllRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GnoSQLService_ServiceDesc is the grpc.ServiceDesc for GnoSQLService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -530,6 +562,10 @@ var GnoSQLService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteDocument",
 			Handler:    _GnoSQLService_DeleteDocument_Handler,
+		},
+		{
+			MethodName: "GetAllDocuments",
+			Handler:    _GnoSQLService_GetAllDocuments_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

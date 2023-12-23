@@ -144,3 +144,166 @@ func ServiceGetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName s
 
 	return result
 }
+
+func ServiceDocumentCreate(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, document in_memory_database.Document) in_memory_database.DocumentCreateResult {
+
+	var result = in_memory_database.DocumentCreateResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	uniqueUuid := utils.Generate16DigitUUID()
+
+	document["id"] = uniqueUuid
+
+	var createEvent in_memory_database.Event = in_memory_database.Event{
+		Type:      utils.EVENT_CREATE,
+		EventData: document,
+	}
+
+	collection.EventChannel <- createEvent
+	result.Data = document
+
+	return result
+}
+
+func ServiceDocumentRead(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentReadResult {
+
+	var result = in_memory_database.DocumentReadResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	existingDocument := collection.Read(id)
+
+	if existingDocument == nil {
+		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
+		return result
+	}
+
+	result.Data = existingDocument
+
+	return result
+}
+
+func ServiceDocumentFilter(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, filter in_memory_database.MapInterface) in_memory_database.DocumentFilterResult {
+
+	var result = in_memory_database.DocumentFilterResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	documents := collection.Filter(filter)
+
+	result.Data = documents
+
+	return result
+}
+
+func ServiceDocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, id string,
+	document in_memory_database.Document) in_memory_database.DocumentUpdateResult {
+
+	var result = in_memory_database.DocumentUpdateResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	existingDocument := collection.Read(id)
+
+	if existingDocument == nil {
+		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
+		return result
+	}
+
+	for key, value := range document {
+		existingDocument[key] = value
+	}
+
+	var updateEvent in_memory_database.Event = in_memory_database.Event{
+		Type:      utils.EVENT_UPDATE,
+		Id:        id,
+		EventData: existingDocument,
+	}
+
+	collection.EventChannel <- updateEvent
+
+	result.Data = existingDocument
+
+	return result
+}
+
+func ServiceDocumentDelete(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentDeleteResult {
+
+	var result = in_memory_database.DocumentDeleteResult{}
+
+	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
+
+	if db == nil {
+		result.Error = utils.DATABASE_NOT_FOUND_MSG
+		return result
+	}
+
+	if collection == nil {
+		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+		return result
+	}
+
+	existingDocument := collection.Read(id)
+
+	if existingDocument == nil {
+		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
+		return result
+	}
+
+	var deleteEvent in_memory_database.Event = in_memory_database.Event{
+		Type: utils.EVENT_DELETE,
+		Id:   id,
+	}
+
+	collection.EventChannel <- deleteEvent
+
+	result.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
+
+	return result
+}
