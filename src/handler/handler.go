@@ -13,7 +13,7 @@ import (
 // @Description  To create new database
 // @Tags         database
 // @Produce      json
-// @Param        database  body router.DatabaseRequestInput  true  "Database"
+// @Param        database  body in_memory_database.DatabaseCreateRequest  true  "Database"
 // @Success      200 "database created successfully"
 // @Success      400 "Database already exists"
 // @Router       /database/add [post]
