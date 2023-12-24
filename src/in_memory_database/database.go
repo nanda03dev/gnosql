@@ -66,7 +66,7 @@ func (db *Database) DeleteDatabase() {
 	os.RemoveAll(db.DatabaseFolderPath)
 
 	for _, collection := range db.Collections {
-		collection.DeleteCollection()
+		collection.DeleteCollection(true)
 	}
 }
 
@@ -87,15 +87,18 @@ func (db *Database) DeleteColls(collectionNamesToDelete []string) *Database {
 	var Collections []*Collection = make([]*Collection, 0)
 
 	for _, collection := range db.Collections {
-		check := false
+		ToBeDeleted := false
 		for _, collectionNameToDelete := range collectionNamesToDelete {
 			if collectionNameToDelete == collection.CollectionName {
-				check = true
+				ToBeDeleted = true
 			}
 		}
-		if !check {
+		if !ToBeDeleted {
 			Collections = append(Collections, collection)
+		} else {
+			collection.DeleteCollection(false)
 		}
+
 	}
 
 	db.Collections = Collections

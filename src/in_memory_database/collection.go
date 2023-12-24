@@ -33,7 +33,7 @@ type CollectionStats struct {
 }
 
 const EventChannelSize = 1 * 10 * 100 * 1000
-const TimerToSaveToDisk = 100 * time.Minute
+const TimerToSaveToDisk = 1 * time.Minute
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
@@ -82,9 +82,10 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			CollectionFullPath: fullPath,
 			mu:                 sync.RWMutex{},
 			EventChannel:       make(chan Event, EventChannelSize),
-			IsChanged:          true,
+			IsChanged:          false,
 		}
 
+	collection.SaveCollectionToFile()
 	collection.StartInternalFunctions()
 
 	return collection
@@ -114,8 +115,11 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 	return collections
 }
 
-func (collection *Collection) DeleteCollection() {
-	utils.DeleteFile(collection.CollectionFullPath)
+func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
+	if !IsDbDeleted {
+		utils.DeleteFile(collection.CollectionFullPath)
+	}
+	collection.EventChannel <- Event{Type: utils.EVENT_STOP_GO_ROUTINE}
 	collection.Clear()
 }
 
@@ -538,7 +542,10 @@ func (collection *Collection) EventListener() {
 				println("No changes occured in collection : ", collection.CollectionName)
 			}
 		}
+		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
+			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
+			return
+		}
 
 	}
-	fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
 }
