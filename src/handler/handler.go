@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
 	"gnosql/src/utils"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary      Create new database
@@ -17,22 +18,16 @@ import (
 // @Success      400 "Database already exists"
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var value in_memory_database.MapInterface
+	var requestBody in_memory_database.DatabaseCreateRequest
 	var result = in_memory_database.DatabaseCreateResult{}
 
-	if err := c.BindJSON(&value); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	CollectionsInterface := make([]interface{}, 0)
-
-	if collections, exists := value["Collections"]; exists {
-		CollectionsInterface = collections.([]interface{})
-	}
-
-	result = service.ServiceCreateDatabase(gnoSQL, value["DatabaseName"].(string), in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
+	result = service.ServiceCreateDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -46,17 +41,17 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "Unexpected error while delete database"
 // @Router       /database/delete [post]
 func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var value map[string]string
+	var requestBody in_memory_database.DatabaseDeleteRequest
 
 	var result = in_memory_database.DatabaseDeleteResult{}
 
-	if err := c.BindJSON(&value); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceDeleteDatabase(gnoSQL, value["DatabaseName"])
+	result = service.ServiceDeleteDatabase(gnoSQL, requestBody.DatabaseName)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -97,17 +92,16 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "collection already exists"
 // @Router       /collection/{databaseName}/add [post]
 func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var CollectionsInterface []interface{}
+	var requestBody in_memory_database.CollectionCreateRequest
 	var result = in_memory_database.CollectionCreateResult{}
 
-	if err := c.BindJSON(&CollectionsInterface); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceCreateCollections(gnoSQL, c.Param("DatabaseName"),
-		in_memory_database.ConvertToCollectionInputs(CollectionsInterface))
+	result = service.ServiceCreateCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -123,16 +117,16 @@ func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /collection/{databaseName}/delete [post]
 func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	var value map[string][]string
+	var requestBody in_memory_database.CollectionDeleteRequest
 	var result = in_memory_database.CollectionDeleteResult{}
 
-	if err := c.BindJSON(&value); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceDeleteCollections(gnoSQL, c.Param("DatabaseName"), value["Collections"])
+	result = service.ServiceDeleteCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -145,8 +139,17 @@ func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /collection/{databaseName}/get-all [get]
 func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.CollectionGetAllRequest
+	var result = in_memory_database.CollectionGetAllResult{}
 
-	result := service.ServiceGetAllCollections(gnoSQL, c.Param("DatabaseName"))
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ServiceGetAllCollections(gnoSQL, requestBody.DatabaseName)
+
 	// Send the JSON response
 	c.JSON(http.StatusOK, result)
 }
@@ -161,7 +164,17 @@ func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /collection/{databaseName}/{collectionName}/stats [get]
 func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	result := service.ServiceGetCollectionStats(gnoSQL, c.Param("DatabaseName"), c.Param("CollectionName"))
+
+	var requestBody in_memory_database.CollectionStatsRequest
+	var result = in_memory_database.CollectionStatsResult{}
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ServiceGetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
 	c.JSON(http.StatusOK, result)
 
@@ -179,18 +192,17 @@ func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /document/{databaseName}/{collectionName}/ [post]
 func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	var document in_memory_database.Document
+	var requestBody in_memory_database.DocumentCreateRequest
 
 	var result = in_memory_database.DocumentCreateResult{}
 
-	if err := c.BindJSON(&document); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceDocumentCreate(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"), document)
+	result = service.ServiceDocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -206,9 +218,17 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [get]
 func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.DocumentReadRequest
 
-	result := service.ServiceDocumentRead(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"), c.Param("id"))
+	var result = in_memory_database.DocumentReadResult{}
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ServiceDocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -224,18 +244,17 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/filter [post]
 func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var filter in_memory_database.MapInterface
+	var requestBody in_memory_database.DocumentFilterRequest
 
 	var result = in_memory_database.DocumentFilterResult{}
 
-	if err := c.BindJSON(&filter); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceDocumentFilter(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"), filter)
+	result = service.ServiceDocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -252,18 +271,17 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [put]
 func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	var document in_memory_database.Document
+	var requestBody in_memory_database.DocumentUpdateRequest
 
 	var result = in_memory_database.DocumentUpdateResult{}
 
-	if err := c.BindJSON(&document); err != nil {
+	if err := c.BindJSON(&requestBody); err != nil {
 		result.Error = utils.ERROR_WHILE_BINDING_JSON
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
 
-	result = service.ServiceDocumentUpdate(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"), c.Param("id"), document)
+	result = service.ServiceDocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id, requestBody.Document)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -279,9 +297,17 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/{id} [delete]
 func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.DocumentDeleteRequest
 
-	result := service.ServiceDocumentDelete(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"), c.Param("id"))
+	var result = in_memory_database.DocumentDeleteResult{}
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ServiceDocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -296,9 +322,17 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success   	 400 "Database/Collection deleted"
 // @Router       /document/{databaseName}/{collectionName}/all-data [get]
 func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.DocumentGetAllRequest
 
-	result := service.ServiceDocumentGetAll(gnoSQL, c.Param("DatabaseName"),
-		c.Param("CollectionName"))
+	var result = in_memory_database.DocumentGetAllResult{}
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ServiceDocumentGetAll(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
 	c.JSON(http.StatusOK, result)
 }

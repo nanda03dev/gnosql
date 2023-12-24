@@ -10,11 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	SeedRoute(router, gnoSQL)
-	DatabaseRoutes(router, gnoSQL)
-	CollectionRoutes(router, gnoSQL)
-	DocumentRoutes(router, gnoSQL)
+func RouterInit(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	SeedRoute(ginRouter, gnoSQL)
+	DatabaseRoutes(ginRouter, gnoSQL)
+	CollectionRoutes(ginRouter, gnoSQL)
+	DocumentRoutes(ginRouter, gnoSQL)
 }
 
 // @Summary      generate seed database
@@ -23,8 +23,8 @@ func RouterInit(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 // @Produce      json
 // @Success      200
 // @Router       /generate-seed-data [get]
-func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	router.GET("/generate-seed-data", func(c *gin.Context) {
+func SeedRoute(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	ginRouter.GET("/generate-seed-data", func(c *gin.Context) {
 		var database *in_memory_database.Database = seed.SeedData(gnoSQL)
 		if database == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"status": "Seed database and routes exists already"})
@@ -34,10 +34,10 @@ func SeedRoute(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	})
 }
 
-func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+func DatabaseRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	path := "/database"
 
-	DatabaseRoutesGroup := router.Group(path)
+	DatabaseRoutesGroup := ginRouter.Group(path)
 	{
 		DatabaseRoutesGroup.POST("/add", func(c *gin.Context) {
 			handler.CreateDatabase(c, gnoSQL)
@@ -58,44 +58,44 @@ func DatabaseRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	}
 }
 
-func CollectionRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+func CollectionRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
-	path := "/collection/:DatabaseName"
+	path := "/collection"
 
-	CollectionRoutesGroup := router.Group(path)
+	CollectionRoutesGroup := ginRouter.Group(path)
 	{
 		CollectionRoutesGroup.POST("/add", func(c *gin.Context) {
 			handler.CreateCollection(c, gnoSQL)
 		})
 
-		CollectionRoutesGroup.DELETE("/delete", func(c *gin.Context) {
+		CollectionRoutesGroup.POST("/delete", func(c *gin.Context) {
 			handler.DeleteCollection(c, gnoSQL)
 		})
 
-		CollectionRoutesGroup.GET("/get-all", func(c *gin.Context) {
+		CollectionRoutesGroup.POST("/get-all", func(c *gin.Context) {
 			handler.GetAllCollections(c, gnoSQL)
 		})
 
 		// Get collection stats
-		CollectionRoutesGroup.GET("/:CollectionName/stats", func(c *gin.Context) {
+		CollectionRoutesGroup.POST("/stats", func(c *gin.Context) {
 			handler.CollectionStats(c, gnoSQL)
 		})
 	}
 
 }
 
-func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
-	path := "/document/:DatabaseName/:CollectionName"
+func DocumentRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	path := "/document/"
 
-	DocumentRoutesGroup := router.Group(path)
+	DocumentRoutesGroup := ginRouter.Group(path)
 	{
 		// Create
-		DocumentRoutesGroup.POST("/", func(c *gin.Context) {
+		DocumentRoutesGroup.POST("/add", func(c *gin.Context) {
 			handler.CreateDocument(c, gnoSQL)
 		})
 
 		// Read
-		DocumentRoutesGroup.GET("/:id", func(c *gin.Context) {
+		DocumentRoutesGroup.POST("/find", func(c *gin.Context) {
 			handler.ReadDocument(c, gnoSQL)
 		})
 
@@ -105,19 +105,18 @@ func DocumentRoutes(router *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		})
 
 		// Update
-		DocumentRoutesGroup.PUT("/:id", func(c *gin.Context) {
+		DocumentRoutesGroup.POST("/update", func(c *gin.Context) {
 			handler.UpdateDocument(c, gnoSQL)
 		})
 
 		// Delete
-		DocumentRoutesGroup.DELETE("/:id", func(c *gin.Context) {
+		DocumentRoutesGroup.POST("/delete", func(c *gin.Context) {
 			handler.DeleteDocument(c, gnoSQL)
 		})
 
 		// Get all data
-		DocumentRoutesGroup.GET("/all-data", func(c *gin.Context) {
+		DocumentRoutesGroup.POST("/all-data", func(c *gin.Context) {
 			handler.ReadAllDocument(c, gnoSQL)
 		})
 	}
-
 }

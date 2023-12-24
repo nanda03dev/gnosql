@@ -104,6 +104,8 @@ func ServiceDeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName st
 func ServiceGetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.CollectionGetAllResult {
 	var result = in_memory_database.CollectionGetAllResult{}
 
+	println("DatabaseName ", DatabaseName)
+
 	db := gnoSQL.GetDB(DatabaseName)
 
 	if db == nil {
