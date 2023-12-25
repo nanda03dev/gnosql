@@ -132,15 +132,10 @@ func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreat
 
 	result := service.ServiceDocumentCreate(s.GnoSQL, req.DatabaseName, req.CollectionName, newDocument)
 
-	responseDataString, MarshalErr := json.Marshal(result.Data)
+	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
 
-	if MarshalErr != nil {
-		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
-		return response, nil
-	}
-
-	response.Data = string(responseDataString)
-	response.Error = result.Error
+	response.Data = Data
+	response.Error = Error
 
 	return response, nil
 }
@@ -150,15 +145,10 @@ func (s *GnoSQLServer) ReadDocument(ctx context.Context, req *pb.DocumentReadReq
 
 	result := service.ServiceDocumentRead(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id)
 
-	responseDataString, MarshalErr := json.Marshal(result.Data)
+	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
 
-	if MarshalErr != nil {
-		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
-		return response, nil
-	}
-
-	response.Data = string(responseDataString)
-	response.Error = result.Error
+	response.Data = Data
+	response.Error = Error
 
 	return response, nil
 }
@@ -177,15 +167,10 @@ func (s *GnoSQLServer) FilterDocument(ctx context.Context, req *pb.DocumentFilte
 
 	result := service.ServiceDocumentFilter(s.GnoSQL, req.DatabaseName, req.CollectionName, filter)
 
-	responseDataString, MarshalErr := json.Marshal(result.Data)
+	Data, Error := ConvertDocumentMapsToString(result.Data, result.Error)
 
-	if MarshalErr != nil {
-		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
-		return response, nil
-	}
-
-	response.Data = string(responseDataString)
-	response.Error = result.Error
+	response.Data = Data
+	response.Error = Error
 
 	return response, nil
 }
@@ -204,15 +189,10 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 
 	result := service.ServiceDocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id, document)
 
-	responseDataString, MarshalErr := json.Marshal(result.Data)
+	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
 
-	if MarshalErr != nil {
-		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
-		return response, nil
-	}
-
-	response.Data = string(responseDataString)
-	response.Error = result.Error
+	response.Data = Data
+	response.Error = Error
 
 	return response, nil
 }
@@ -230,20 +210,12 @@ func (s *GnoSQLServer) DeleteDocument(ctx context.Context, req *pb.DocumentDelet
 func (s *GnoSQLServer) GetAllDocuments(ctx context.Context, req *pb.DocumentGetAllRequest) (*pb.DocumentGetAllResponse, error) {
 	response := &pb.DocumentGetAllResponse{}
 
-	fmt.Printf("\n req %v \n ", req)
-
 	result := service.ServiceDocumentGetAll(s.GnoSQL, req.DatabaseName, req.CollectionName)
-	fmt.Printf("\n result %v \n ", result)
 
-	responseDataString, MarshalErr := json.Marshal(result.Data)
+	Data, Error := ConvertDocumentMapsToString(result.Data, result.Error)
 
-	if MarshalErr != nil {
-		response.Error = utils.ERROR_WHILE_MARSHAL_JSON
-		return response, nil
-	}
-
-	response.Data = string(responseDataString)
-	response.Error = result.Error
+	response.Data = Data
+	response.Error = Error
 
 	return response, nil
 }
@@ -261,4 +233,22 @@ func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_
 	}
 
 	return collectionsInput
+}
+
+func ConvertDocumentMapToString(document in_memory_database.Document, gRPCError string) (string, string) {
+	responseDataString, MarshalErr := json.Marshal(document)
+
+	if MarshalErr != nil {
+		return "", utils.ERROR_WHILE_MARSHAL_JSON
+	}
+	return string(responseDataString), gRPCError
+}
+
+func ConvertDocumentMapsToString(document []in_memory_database.Document, gRPCError string) (string, string) {
+	responseDataString, MarshalErr := json.Marshal(document)
+
+	if MarshalErr != nil {
+		return "", utils.ERROR_WHILE_MARSHAL_JSON
+	}
+	return string(responseDataString), gRPCError
 }
