@@ -1,17 +1,15 @@
 package service
 
 import (
-	"fmt"
+	"errors"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
 )
 
-func ServiceCreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseCreateResult {
+func CreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseCreateResult {
 	var result = in_memory_database.DatabaseCreateResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
-
-	fmt.Printf("\n collectionsInput %v \n ", collectionsInput)
 
 	if db != nil {
 		result.Error = "Database already exists"
@@ -25,15 +23,13 @@ func ServiceCreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName strin
 	return result
 }
 
-func ServiceDeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.DatabaseDeleteResult {
+func DeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.DatabaseDeleteResult {
 	var result = in_memory_database.DatabaseDeleteResult{}
 
-	fmt.Printf("\n DatabaseName %v\n ", DatabaseName)
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-
+	if err := validateDatabase(db); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -44,7 +40,7 @@ func ServiceDeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName strin
 	return result
 }
 
-func ServiceGetAllDatabase(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseGetAllResult {
+func GetAllDatabase(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseGetAllResult {
 	var result = in_memory_database.DatabaseGetAllResult{}
 
 	databaseNames := make([]string, 0)
@@ -58,7 +54,7 @@ func ServiceGetAllDatabase(gnoSQL *in_memory_database.GnoSQL) in_memory_database
 	return result
 }
 
-func ServiceLoadToDisk(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseLoadToDiskResult {
+func LoadToDisk(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseLoadToDiskResult {
 	var result = in_memory_database.DatabaseLoadToDiskResult{}
 
 	go gnoSQL.WriteAllDBs()
@@ -67,13 +63,13 @@ func ServiceLoadToDisk(gnoSQL *in_memory_database.GnoSQL) in_memory_database.Dat
 	return result
 }
 
-func ServiceCreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.CollectionCreateResult {
+func CreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.CollectionCreateResult {
 	var result = in_memory_database.CollectionCreateResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
+	if err := validateDatabase(db); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -84,13 +80,13 @@ func ServiceCreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName st
 	return result
 }
 
-func ServiceDeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collections []string) in_memory_database.CollectionDeleteResult {
+func DeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collections []string) in_memory_database.CollectionDeleteResult {
 	var result = in_memory_database.CollectionDeleteResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
+	if err := validateDatabase(db); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -101,15 +97,13 @@ func ServiceDeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName st
 	return result
 }
 
-func ServiceGetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.CollectionGetAllResult {
+func GetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.CollectionGetAllResult {
 	var result = in_memory_database.CollectionGetAllResult{}
-
-	println("DatabaseName ", DatabaseName)
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
+	if err := validateDatabase(db); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -126,18 +120,13 @@ func ServiceGetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName st
 	return result
 }
 
-func ServiceGetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, CollectionName string) in_memory_database.CollectionStatsResult {
+func GetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, CollectionName string) in_memory_database.CollectionStatsResult {
 	var result = in_memory_database.CollectionStatsResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -147,20 +136,15 @@ func ServiceGetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName s
 	return result
 }
 
-func ServiceDocumentCreate(gnoSQL *in_memory_database.GnoSQL,
+func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, document in_memory_database.Document) in_memory_database.DocumentCreateResult {
 
 	var result = in_memory_database.DocumentCreateResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -179,20 +163,15 @@ func ServiceDocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 	return result
 }
 
-func ServiceDocumentRead(gnoSQL *in_memory_database.GnoSQL,
+func DocumentRead(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentReadResult {
 
 	var result = in_memory_database.DocumentReadResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -208,20 +187,15 @@ func ServiceDocumentRead(gnoSQL *in_memory_database.GnoSQL,
 	return result
 }
 
-func ServiceDocumentFilter(gnoSQL *in_memory_database.GnoSQL,
+func DocumentFilter(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, filter in_memory_database.MapInterface) in_memory_database.DocumentFilterResult {
 
 	var result = in_memory_database.DocumentFilterResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -232,7 +206,7 @@ func ServiceDocumentFilter(gnoSQL *in_memory_database.GnoSQL,
 	return result
 }
 
-func ServiceDocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
+func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, id string,
 	document in_memory_database.Document) in_memory_database.DocumentUpdateResult {
 
@@ -240,13 +214,8 @@ func ServiceDocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -274,20 +243,15 @@ func ServiceDocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 	return result
 }
 
-func ServiceDocumentDelete(gnoSQL *in_memory_database.GnoSQL,
+func DocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentDeleteResult {
 
 	var result = in_memory_database.DocumentDeleteResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -310,20 +274,15 @@ func ServiceDocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 	return result
 }
 
-func ServiceDocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
+func DocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string) in_memory_database.DocumentGetAllResult {
 
 	var result = in_memory_database.DocumentGetAllResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		result.Error = err.Error()
 		return result
 	}
 
@@ -332,4 +291,28 @@ func ServiceDocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
 	result.Data = documents
 
 	return result
+}
+
+// validateDatabase checks if db is nil, returns an error if it is
+func validateDatabase(db *in_memory_database.Database) error {
+	if db == nil {
+		return errors.New(utils.DATABASE_NOT_FOUND_MSG)
+	}
+	return nil
+}
+
+// validateCollection checks if collection is nil, returns an error if it is
+func validateCollection(collection *in_memory_database.Collection) error {
+	if collection == nil {
+		return errors.New(utils.COLLECTION_NOT_FOUND_MSG)
+	}
+	return nil
+}
+
+// validateDatabaseAndCollection checks if db or collection are nil, returns an error if either is nil
+func validateDatabaseAndCollection(db *in_memory_database.Database, collection *in_memory_database.Collection) error {
+	if err := validateDatabase(db); err != nil {
+		return err
+	}
+	return validateCollection(collection)
 }

@@ -27,7 +27,7 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceCreateDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result = service.CreateDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -51,7 +51,7 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDeleteDatabase(gnoSQL, requestBody.DatabaseName)
+	result = service.DeleteDatabase(gnoSQL, requestBody.DatabaseName)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -64,7 +64,7 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /database/get-all [get]
 func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
-	result := service.ServiceGetAllDatabase(gnoSQL)
+	result := service.GetAllDatabase(gnoSQL)
 
 	// Send the JSON response
 	c.JSON(http.StatusOK, result)
@@ -77,7 +77,7 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	result := service.ServiceLoadToDisk(gnoSQL)
+	result := service.LoadToDisk(gnoSQL)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -101,7 +101,7 @@ func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceCreateCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result = service.CreateCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -126,7 +126,7 @@ func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDeleteCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result = service.DeleteCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -148,7 +148,7 @@ func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceGetAllCollections(gnoSQL, requestBody.DatabaseName)
+	result = service.GetAllCollections(gnoSQL, requestBody.DatabaseName)
 
 	// Send the JSON response
 	c.JSON(http.StatusOK, result)
@@ -174,7 +174,7 @@ func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceGetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
+	result = service.GetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
 	c.JSON(http.StatusOK, result)
 
@@ -202,7 +202,7 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
+	result = service.DocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
 
 	c.JSON(http.StatusCreated, result)
 }
@@ -228,7 +228,7 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result = service.DocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -254,7 +254,7 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
+	result = service.DocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -281,7 +281,7 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id, requestBody.Document)
+	result = service.DocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id, requestBody.Document)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -307,7 +307,7 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result = service.DocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -332,7 +332,7 @@ func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.ServiceDocumentGetAll(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
+	result = service.DocumentGetAll(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
 	c.JSON(http.StatusOK, result)
 }
