@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
 	"gnosql/src/utils"
@@ -19,6 +20,7 @@ import (
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
+
 	var result = in_memory_database.DatabaseCreateResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
@@ -201,8 +203,9 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
-
+	fmt.Printf("requestBody %v ", requestBody)
 	result = service.DocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
+	fmt.Printf("result %v ", result)
 
 	c.JSON(http.StatusCreated, result)
 }

@@ -3,7 +3,6 @@ package grpc_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	pb "gnosql/proto"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
@@ -220,7 +219,6 @@ func (s *GnoSQLServer) GetAllDocuments(ctx context.Context, req *pb.DocumentGetA
 	return response, nil
 }
 func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_database.CollectionInput {
-	fmt.Printf("ConvertReqToCollectionInput")
 
 	var collectionsInput []in_memory_database.CollectionInput
 

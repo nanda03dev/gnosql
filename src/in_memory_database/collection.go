@@ -127,7 +127,11 @@ func (collection *Collection) Create(document Document) Document {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
-	uniqueUuid := document["id"].(string)
+	if document["id"] == nil {
+		document["id"] = utils.Generate16DigitUUID()
+	}
+
+	var uniqueUuid string = document["id"].(string)
 
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
 

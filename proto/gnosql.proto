@@ -8,149 +8,149 @@ message NoRequestBody {
 }
 
 message DatabaseCreateRequest {
-  string DatabaseName = 1;
-  repeated CollectionInput Collections = 2;
+  string databaseName = 1;
+  repeated CollectionInput collections = 2;
 }
 
 message DatabaseCreateResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DatabaseDeleteRequest {
-  string DatabaseName = 1;
+  string databaseName = 1;
 }
 
 message DatabaseDeleteResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DatabaseGetAllResponse {
-  repeated string Data = 1;
-  string Error = 2;
+  repeated string data = 1;
+  string error = 2;
 }
 
 message LoadToDiskResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message CollectionInput {
-  string CollectionName = 1;
-  repeated string IndexKeys = 2;
+  string collectionName = 1;
+  repeated string indexKeys = 2;
 }
 
 message CollectionCreateRequest {
-  string DatabaseName = 1;
-  repeated CollectionInput Collections = 2;
+  string databaseName = 1;
+  repeated CollectionInput collections = 2;
 }
 
 message CollectionCreateResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message CollectionDeleteRequest {
-  string DatabaseName = 1;
-  repeated string Collections = 2;
+  string databaseName = 1;
+  repeated string collections = 2;
 }
 
 message CollectionDeleteResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message CollectionGetAllRequest {
-  string DatabaseName = 1;
+  string databaseName = 1;
 }
 
 message CollectionGetAllResponse {
-  repeated string Data = 1;
-  string Error = 2;
+  repeated string data = 1;
+  string error = 2;
 }
 
 message CollectionStatsRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
+  string databaseName = 1;
+  string collectionName = 2;
 }
 
 message CollectionStatsResponse {
-  CollectionStats Data = 1;
-  string Error = 2;
+  CollectionStats data = 1;
+  string error = 2;
 
 }
 
 message CollectionStats  {
-	string CollectionName = 1;
-  repeated string IndexKeys= 2;
-	int32 Documents = 3;
+	string collectionName = 1;
+  repeated string indexKeys= 2;
+	int32 documents = 3;
 }
 
 message DocumentCreateRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
-  string Document = 3;
+  string databaseName = 1;
+  string collectionName = 2;
+  string document = 3;
 }
 
 message DocumentCreateResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DocumentReadRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
-  string Id = 3;
+  string databaseName = 1;
+  string collectionName = 2;
+  string id = 3;
 }
 
 message DocumentReadResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DocumentFilterRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
-  string Filter = 3;
+  string databaseName = 1;
+  string collectionName = 2;
+  string filter = 3;
 }
 
 message DocumentFilterResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DocumentUpdateRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
-  string Id = 3;
-  string Document = 4;
+  string databaseName = 1;
+  string collectionName = 2;
+  string id = 3;
+  string document = 4;
 }
 
 message DocumentUpdateResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DocumentDeleteRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
-  string Id = 3;
+  string databaseName = 1;
+  string collectionName = 2;
+  string id = 3;
 }
 
 message DocumentDeleteResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 message DocumentGetAllRequest {
-  string DatabaseName = 1;
-  string CollectionName = 2;
+  string databaseName = 1;
+  string collectionName = 2;
 }
 
 message DocumentGetAllResponse {
-  string Data = 1;
-  string Error = 2;
+  string data = 1;
+  string error = 2;
 }
 
 service GnoSQLService {
