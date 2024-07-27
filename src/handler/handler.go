@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
 	"gnosql/src/utils"
