@@ -6,6 +6,25 @@ import (
 	"gnosql/src/utils"
 )
 
+func ConnectDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseConnectResult {
+	var result = in_memory_database.DatabaseConnectResult{}
+
+	db := gnoSQL.GetDB(DatabaseName)
+
+	if db == nil {
+		db = gnoSQL.CreateDB(DatabaseName, collectionsInput)
+	} else {
+		db.CreateColls(collectionsInput)
+	}
+
+	result.Data = in_memory_database.DatabaseResult{
+		DatabaseName: db.DatabaseName,
+		Collections:  db.GetCollectionNames(),
+	}
+
+	return result
+}
+
 func CreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseCreateResult {
 	var result = in_memory_database.DatabaseCreateResult{}
 

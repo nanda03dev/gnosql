@@ -39,6 +39,10 @@ func DatabaseRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 	DatabaseRoutesGroup := ginRouter.Group(path)
 	{
+		DatabaseRoutesGroup.POST("/connect", func(c *gin.Context) {
+			handler.ConnectDatabase(c, gnoSQL)
+		})
+
 		DatabaseRoutesGroup.POST("/add", func(c *gin.Context) {
 			handler.CreateDatabase(c, gnoSQL)
 		})

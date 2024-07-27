@@ -17,6 +17,16 @@ message DatabaseCreateResponse {
   string error = 2;
 }
 
+message DatabaseResponse {
+  string databaseName = 1;
+  repeated string collections = 2;
+}
+
+message DatabaseConnectResponse {
+  DatabaseResponse data = 1;
+  string error = 2;
+}
+
 message DatabaseDeleteRequest {
   string databaseName = 1;
 }
@@ -155,6 +165,7 @@ message DocumentGetAllResponse {
 
 service GnoSQLService {
   rpc CreateNewDatabase(DatabaseCreateRequest) returns (DatabaseCreateResponse);
+  rpc ConnectDatabase(DatabaseCreateRequest) returns (DatabaseConnectResponse);
   rpc DeleteDatabase(DatabaseDeleteRequest) returns (DatabaseDeleteResponse);
   rpc GetAllDatabases(NoRequestBody) returns (DatabaseGetAllResponse);
   rpc LoadToDisk(NoRequestBody) returns (LoadToDiskResponse);

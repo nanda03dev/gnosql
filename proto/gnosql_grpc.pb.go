@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion8
 
 const (
 	GnoSQLService_CreateNewDatabase_FullMethodName   = "/proto.GnoSQLService/CreateNewDatabase"
+	GnoSQLService_ConnectDatabase_FullMethodName     = "/proto.GnoSQLService/ConnectDatabase"
 	GnoSQLService_DeleteDatabase_FullMethodName      = "/proto.GnoSQLService/DeleteDatabase"
 	GnoSQLService_GetAllDatabases_FullMethodName     = "/proto.GnoSQLService/GetAllDatabases"
 	GnoSQLService_LoadToDisk_FullMethodName          = "/proto.GnoSQLService/LoadToDisk"
@@ -40,6 +41,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GnoSQLServiceClient interface {
 	CreateNewDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DatabaseCreateResponse, error)
+	ConnectDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DatabaseConnectResponse, error)
 	DeleteDatabase(ctx context.Context, in *DatabaseDeleteRequest, opts ...grpc.CallOption) (*DatabaseDeleteResponse, error)
 	GetAllDatabases(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*DatabaseGetAllResponse, error)
 	LoadToDisk(ctx context.Context, in *NoRequestBody, opts ...grpc.CallOption) (*LoadToDiskResponse, error)
@@ -67,6 +69,16 @@ func (c *gnoSQLServiceClient) CreateNewDatabase(ctx context.Context, in *Databas
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DatabaseCreateResponse)
 	err := c.cc.Invoke(ctx, GnoSQLService_CreateNewDatabase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gnoSQLServiceClient) ConnectDatabase(ctx context.Context, in *DatabaseCreateRequest, opts ...grpc.CallOption) (*DatabaseConnectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DatabaseConnectResponse)
+	err := c.cc.Invoke(ctx, GnoSQLService_ConnectDatabase_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -208,6 +220,7 @@ func (c *gnoSQLServiceClient) GetAllDocuments(ctx context.Context, in *DocumentG
 // for forward compatibility
 type GnoSQLServiceServer interface {
 	CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseCreateResponse, error)
+	ConnectDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseConnectResponse, error)
 	DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DatabaseDeleteResponse, error)
 	GetAllDatabases(context.Context, *NoRequestBody) (*DatabaseGetAllResponse, error)
 	LoadToDisk(context.Context, *NoRequestBody) (*LoadToDiskResponse, error)
@@ -230,6 +243,9 @@ type UnimplementedGnoSQLServiceServer struct {
 
 func (UnimplementedGnoSQLServiceServer) CreateNewDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseCreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNewDatabase not implemented")
+}
+func (UnimplementedGnoSQLServiceServer) ConnectDatabase(context.Context, *DatabaseCreateRequest) (*DatabaseConnectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConnectDatabase not implemented")
 }
 func (UnimplementedGnoSQLServiceServer) DeleteDatabase(context.Context, *DatabaseDeleteRequest) (*DatabaseDeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteDatabase not implemented")
@@ -297,6 +313,24 @@ func _GnoSQLService_CreateNewDatabase_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GnoSQLServiceServer).CreateNewDatabase(ctx, req.(*DatabaseCreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GnoSQLService_ConnectDatabase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DatabaseCreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GnoSQLServiceServer).ConnectDatabase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GnoSQLService_ConnectDatabase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GnoSQLServiceServer).ConnectDatabase(ctx, req.(*DatabaseCreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -545,6 +579,10 @@ var GnoSQLService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNewDatabase",
 			Handler:    _GnoSQLService_CreateNewDatabase_Handler,
+		},
+		{
+			MethodName: "ConnectDatabase",
+			Handler:    _GnoSQLService_ConnectDatabase_Handler,
 		},
 		{
 			MethodName: "DeleteDatabase",

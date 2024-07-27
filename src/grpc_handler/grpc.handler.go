@@ -29,6 +29,24 @@ func (s *GnoSQLServer) CreateNewDatabase(ctx context.Context,
 
 }
 
+func (s *GnoSQLServer) ConnectDatabase(ctx context.Context,
+	req *pb.DatabaseCreateRequest) (*pb.DatabaseConnectResponse, error) {
+
+	response := &pb.DatabaseConnectResponse{}
+	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
+
+	result := service.ConnectDatabase(s.GnoSQL, req.DatabaseName, collectionsInput)
+
+	response.Data = &pb.DatabaseResponse{
+		DatabaseName: result.Data.DatabaseName,
+		Collections:  result.Data.Collections,
+	}
+
+	response.Error = result.Error
+	return response, nil
+
+}
+
 func (s *GnoSQLServer) DeleteDatabase(ctx context.Context, req *pb.DatabaseDeleteRequest) (*pb.DatabaseDeleteResponse, error) {
 
 	var response = &pb.DatabaseDeleteResponse{}

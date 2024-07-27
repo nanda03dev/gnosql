@@ -34,6 +34,30 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	c.JSON(http.StatusCreated, result)
 }
 
+// @Summary      Connect to database
+// @Description  Connect database
+// @Tags         database
+// @Produce      json
+// @Param        database  body in_memory_database.DatabaseCreateRequest  true  "Database"
+// @Success      200 in_memory_database.DatabaseConnectResult
+// @Success      400 "Something went wrong"
+// @Router       /database/connect [post]
+func ConnectDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.DatabaseCreateRequest
+
+	var result = in_memory_database.DatabaseConnectResult{}
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		result.Error = utils.ERROR_WHILE_BINDING_JSON
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	result = service.ConnectDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+
+	c.JSON(http.StatusCreated, result)
+}
+
 // @Summary      Delete database
 // @Description  To delete database
 // @Tags         database
@@ -203,9 +227,7 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		c.JSON(http.StatusBadRequest, result)
 		return
 	}
-	fmt.Printf("requestBody %v ", requestBody)
 	result = service.DocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
-	fmt.Printf("result %v ", result)
 
 	c.JSON(http.StatusCreated, result)
 }
