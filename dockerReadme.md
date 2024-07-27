@@ -2,11 +2,9 @@
 
 GnoSQL is a lightweight, in-memory NoSQL database implemented in Go. It offers a simple and intuitive API for storing and retrieving data without the need for a persistent backend. With support for concurrent operations through goroutines.
 
-Resources
-
 ## Author
 
--   [Nandakumar](https://github.com/Nandha23311/)
+-   [Nandakumar](https://github.com/nanda03dev/)
 
 ## Installation
 
@@ -58,9 +56,14 @@ volumes:
 
 The database files are stored in the container path "/root/gnosql/db". To persist this data, please specify a host volume path and the corresponding container path before starting the container.
 
+## GnoSQL Client
+
+[GnoSQL Client](https://pkg.go.dev/github.com/nanda03dev/gnosql_client) is the Go library to connect with the GnoSQL database.
+
 ### Database Endpoints
 
     * [POST]   /database/add
+    * [POST]   /database/connect
     * [POST]   /database/delete
     * [GET]    /database/get-all
     * [POST]   /collection/{databaseName}/add
