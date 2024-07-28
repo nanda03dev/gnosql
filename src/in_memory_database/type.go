@@ -100,7 +100,7 @@ type DocumentCreateResult struct {
 type DocumentReadRequest struct {
 	DatabaseName   string `json:"databaseName"`
 	CollectionName string `json:"collectionName"`
-	Id             string `json:"id"`
+	Id             string `json:"docId"`
 }
 
 type DocumentReadResult struct {
@@ -122,7 +122,7 @@ type DocumentFilterResult struct {
 type DocumentUpdateRequest struct {
 	DatabaseName   string   `json:"databaseName"`
 	CollectionName string   `json:"collectionName"`
-	Id             string   `json:"id"`
+	Id             string   `json:"docId"`
 	Document       Document `json:"document"`
 }
 
@@ -134,7 +134,7 @@ type DocumentUpdateResult struct {
 type DocumentDeleteRequest struct {
 	DatabaseName   string `json:"databaseName"`
 	CollectionName string `json:"collectionName"`
-	Id             string `json:"id"`
+	Id             string `json:"docId"`
 }
 
 type DocumentDeleteResult struct {

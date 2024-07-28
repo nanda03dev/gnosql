@@ -76,7 +76,7 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 		UserCollection := db.GetColl(UserCollectionInput.CollectionName)
 		newUser := UserCollection.Create(user)
 
-		userId := newUser["id"]
+		userId := newUser["docId"]
 
 		OrderCollection := db.GetColl(OrderCollectionInput.CollectionName)
 

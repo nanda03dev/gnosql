@@ -127,11 +127,11 @@ func (collection *Collection) Create(document Document) Document {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
-	if document["id"] == nil {
-		document["id"] = utils.Generate16DigitUUID()
+	if document["docId"] == nil {
+		document["docId"] = utils.Generate16DigitUUID()
 	}
 
-	var uniqueUuid string = document["id"].(string)
+	var uniqueUuid string = document["docId"].(string)
 
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
 
@@ -386,7 +386,7 @@ func (collection *Collection) Stats() CollectionStats {
 func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["id"]; ok {
+			if id, ok := document["docId"]; ok {
 				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
 			}
 		}
@@ -397,7 +397,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 	for _, eachIndex := range collection.IndexKeys {
 		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
 			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
-				var id string = oldDocument["id"].(string)
+				var id string = oldDocument["docId"].(string)
 				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
 				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
 
@@ -409,7 +409,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["id"]; ok {
+			if id, ok := document["docId"]; ok {
 				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
 			}
 		}
