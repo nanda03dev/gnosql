@@ -167,9 +167,9 @@ func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 		return result
 	}
 
-	uniqueUuid := utils.Generate16DigitUUID()
-
-	document["docId"] = uniqueUuid
+	if document["docId"] == nil {
+		document["docId"] = utils.Generate16DigitUUID()
+	}
 
 	var createEvent in_memory_database.Event = in_memory_database.Event{
 		Type:      utils.EVENT_CREATE,
