@@ -160,7 +160,7 @@ func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreat
 func (s *GnoSQLServer) ReadDocument(ctx context.Context, req *pb.DocumentReadRequest) (*pb.DocumentReadResponse, error) {
 	response := &pb.DocumentReadResponse{}
 
-	result := service.DocumentRead(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id)
+	result := service.DocumentRead(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId)
 
 	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
 
@@ -204,7 +204,7 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 		return response, nil
 	}
 
-	result := service.DocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id, document)
+	result := service.DocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId, document)
 
 	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
 
@@ -217,7 +217,7 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 func (s *GnoSQLServer) DeleteDocument(ctx context.Context, req *pb.DocumentDeleteRequest) (*pb.DocumentDeleteResponse, error) {
 	response := &pb.DocumentDeleteResponse{}
 
-	result := service.DocumentDelete(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id)
+	result := service.DocumentDelete(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId)
 
 	response.Data = result.Data
 	response.Error = result.Error

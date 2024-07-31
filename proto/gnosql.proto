@@ -111,7 +111,7 @@ message DocumentCreateResponse {
 message DocumentReadRequest {
   string databaseName = 1;
   string collectionName = 2;
-  string id = 3;
+  string docId = 3;
 }
 
 message DocumentReadResponse {
@@ -133,7 +133,7 @@ message DocumentFilterResponse {
 message DocumentUpdateRequest {
   string databaseName = 1;
   string collectionName = 2;
-  string id = 3;
+  string docId = 3;
   string document = 4;
 }
 
@@ -145,7 +145,7 @@ message DocumentUpdateResponse {
 message DocumentDeleteRequest {
   string databaseName = 1;
   string collectionName = 2;
-  string id = 3;
+  string docId = 3;
 }
 
 message DocumentDeleteResponse {

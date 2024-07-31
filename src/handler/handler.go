@@ -252,7 +252,7 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.DocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result = service.DocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -305,7 +305,7 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.DocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id, requestBody.Document)
+	result = service.DocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId, requestBody.Document)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -331,7 +331,7 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 		return
 	}
 
-	result = service.DocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result = service.DocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId)
 
 	c.JSON(http.StatusOK, result)
 }
