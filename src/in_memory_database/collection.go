@@ -46,6 +46,7 @@ type Collection struct {
 	EventChannel       chan Event
 	mu                 sync.RWMutex
 	IsChanged          bool
+	LastIndex          int
 }
 
 type CollectionFileStruct struct {
@@ -56,6 +57,7 @@ type CollectionFileStruct struct {
 	DocumentIds        DocumentIds  `json:"DocumentIds"`
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
+	LastIndex          int          `json:"LastIndex"`
 }
 
 type CollectionInput struct {
@@ -83,6 +85,7 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			mu:                 sync.RWMutex{},
 			EventChannel:       make(chan Event, EventChannelSize),
 			IsChanged:          false,
+			LastIndex:          0,
 		}
 
 	collection.SaveCollectionToFile()
@@ -106,6 +109,7 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			EventChannel:       make(chan Event, EventChannelSize),
 			mu:                 sync.RWMutex{},
 			IsChanged:          false,
+			LastIndex:          collectionGob.LastIndex,
 		}
 
 		collection.StartInternalFunctions()
@@ -132,8 +136,9 @@ func (collection *Collection) Create(document Document) Document {
 	}
 
 	var uniqueUuid string = document["docId"].(string)
-
+	documentIndex := collection.LastIndex + 1
 	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
+	document["docIndex"] = documentIndex
 
 	collection.DocumentsMap[uniqueUuid] = document
 
@@ -142,6 +147,7 @@ func (collection *Collection) Create(document Document) Document {
 	collection.createIndex(document)
 
 	collection.IsChanged = true
+	collection.LastIndex = documentIndex
 
 	return document
 }
