@@ -1,0 +1,22 @@
+{{ if .data }}
+<table>
+    <thead>
+        <tr>
+            {{ range $key, $value := index .data 0 }}
+            <th>{{ $key }}</th>
+            {{ end }}
+        </tr>
+    </thead>
+    <tbody>
+        {{ range .data }}
+        <tr>
+            {{ range $key, $value := . }}
+            <td>{{ $value }}</td>
+            {{ end }}
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+{{ else }}
+<p>No data available.</p>
+{{ end }}
