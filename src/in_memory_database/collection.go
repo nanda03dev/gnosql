@@ -189,9 +189,9 @@ outerLoop:
 		filteredIds = collection.DocumentIds
 	}
 
-	fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
-	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
-	fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
+	// fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
+	// fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
+	// fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
 
 	filteredIdsLength := len(filteredIds)
 
