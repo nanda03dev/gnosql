@@ -43,10 +43,10 @@ type Collection struct {
 	DocumentIds        DocumentIds  `json:"DocumentIds"`
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
+	LastIndex          int          `json:"LastIndex"`
 	EventChannel       chan Event
 	mu                 sync.RWMutex
 	IsChanged          bool
-	LastIndex          int
 }
 
 type CollectionFileStruct struct {
@@ -106,10 +106,10 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			IndexMap:           collectionGob.IndexMap,
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
+			LastIndex:          collectionGob.LastIndex,
 			EventChannel:       make(chan Event, EventChannelSize),
 			mu:                 sync.RWMutex{},
 			IsChanged:          false,
-			LastIndex:          collectionGob.LastIndex,
 		}
 
 		collection.StartInternalFunctions()
@@ -135,9 +135,9 @@ func (collection *Collection) Create(document Document) Document {
 		document["docId"] = utils.Generate16DigitUUID()
 	}
 
-	var uniqueUuid string = document["docId"].(string)
+	var uniqueUuid = document["docId"].(string)
 	documentIndex := collection.LastIndex + 1
-	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
+	document["created"] = utils.UuidStringToTimeString(uniqueUuid)
 	document["docIndex"] = documentIndex
 
 	collection.DocumentsMap[uniqueUuid] = document
@@ -460,6 +460,7 @@ func (collection *Collection) SaveCollectionToFile() {
 		IndexMap:           collection.IndexMap,
 		CollectionFileName: collection.CollectionFileName,
 		CollectionFullPath: collection.CollectionFullPath,
+		LastIndex:          collection.LastIndex,
 	}
 
 	gobData, err := utils.EncodeGob(temp)
@@ -507,14 +508,14 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	fileData, err := os.ReadFile(filePath)
 
 	if err != nil {
-		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
+		fmt.Printf("\n Collection file %s reading, Error %v", filePath, err)
 		return gobData, err
 	}
 
 	err = utils.DecodeGob(fileData, &gobData)
 
 	if err != nil {
-		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)
+		fmt.Printf("\n Collection file %s decoding , Error %v", filePath, err)
 
 		return gobData, err
 	}
@@ -548,8 +549,6 @@ func (collection *Collection) EventListener() {
 		if event.Type == utils.EVENT_SAVE_TO_DISK {
 			if collection.IsChanged {
 				collection.SaveCollectionToFile()
-			} else {
-				println("No changes occured in collection : ", collection.CollectionName)
 			}
 		}
 		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
