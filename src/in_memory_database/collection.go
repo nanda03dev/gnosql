@@ -6,6 +6,7 @@ import (
 	"gnosql/src/utils"
 	"os"
 	"slices"
+	"sort"
 	"sync"
 	"time"
 )
@@ -158,12 +159,17 @@ func (collection *Collection) Read(id string) Document {
 
 func (collection *Collection) Filter(reqFilter MapInterface) []Document {
 	filters := make([]MapInterface, 0)
+	var limit int = 1000
 
 	for key, value := range reqFilter {
 		temp := make(MapInterface)
-		temp["key"] = key
-		temp["value"] = value
-		filters = append(filters, temp)
+		if key != "limit" {
+			temp["key"] = key
+			temp["value"] = value
+			filters = append(filters, temp)
+		} else {
+			limit = value.(int)
+		}
 	}
 
 	filtersWithoutIndex := make([]MapInterface, 0)
@@ -229,8 +235,21 @@ outerLoop:
 		results = append(results, result)
 	}
 
-	return results
+	sortDocuments(results)
 
+	var limitedResult = make([]Document, 0)
+
+	var lengthOfResult = len(results)
+
+	if len(results) < limit {
+		limit = lengthOfResult
+	}
+
+	for i := 0; i < limit; i++ {
+		limitedResult = append(limitedResult, results[i])
+	}
+
+	return limitedResult
 }
 
 func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds, start int, end int) {
@@ -557,4 +576,20 @@ func (collection *Collection) EventListener() {
 		}
 
 	}
+}
+
+type SortByDocIndex []Document
+
+func (a SortByDocIndex) Len() int      { return len(a) }
+func (a SortByDocIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a SortByDocIndex) Less(i, j int) bool {
+
+	iDocIndex := a[i]["docIndex"].(int)
+	jDocIndex := a[j]["docIndex"].(int)
+
+	return iDocIndex < jDocIndex
+}
+
+func sortDocuments(documents []Document) {
+	sort.Sort(SortByDocIndex(documents))
 }

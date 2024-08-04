@@ -4,7 +4,6 @@ import (
 	"errors"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
-	"sort"
 )
 
 func ConnectDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseConnectResult {
@@ -221,8 +220,6 @@ func DocumentFilter(gnoSQL *in_memory_database.GnoSQL,
 
 	documents := collection.Filter(filter)
 
-	sortDocuments(documents)
-
 	result.Data = documents
 
 	return result
@@ -337,20 +334,4 @@ func validateDatabaseAndCollection(db *in_memory_database.Database, collection *
 		return err
 	}
 	return validateCollection(collection)
-}
-
-type SortByDocIndex []in_memory_database.Document
-
-func (a SortByDocIndex) Len() int      { return len(a) }
-func (a SortByDocIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a SortByDocIndex) Less(i, j int) bool {
-
-	iDocIndex := a[i]["docIndex"].(int)
-	jDocIndex := a[j]["docIndex"].(int)
-
-	return iDocIndex < jDocIndex
-}
-
-func sortDocuments(documents []in_memory_database.Document) {
-	sort.Sort(SortByDocIndex(documents))
 }
