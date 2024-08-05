@@ -129,8 +129,8 @@ func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
 }
 
 func (collection *Collection) Create(document Document) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
 	if document["docId"] == nil {
 		document["docId"] = utils.Generate16DigitUUID()
@@ -154,10 +154,16 @@ func (collection *Collection) Create(document Document) Document {
 }
 
 func (collection *Collection) Read(id string) Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	return collection.DocumentsMap[id]
 }
 
 func (collection *Collection) Filter(reqFilter MapInterface) []Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	filters := make([]MapInterface, 0)
 	var limit int = 1000
 
@@ -276,7 +282,6 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 }
 
 func (collection *Collection) filterWithIndex(filters []MapInterface) DocumentIds {
-
 	filteredIndexMap := make(IndexMap)
 
 	for _, filter := range filters {
@@ -346,8 +351,8 @@ outerLoop:
 }
 
 func (collection *Collection) Update(id string, updatedDocument Document) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
 	if _, exists := collection.DocumentsMap[id]; !exists {
 		return nil
@@ -362,15 +367,15 @@ func (collection *Collection) Update(id string, updatedDocument Document) Docume
 }
 
 func (collection *Collection) Delete(id string) error {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
 	if document, exists := collection.DocumentsMap[id]; exists {
 		delete(collection.DocumentsMap, id)
 
 		collection.deleteIndex(document)
 	} else {
-		return fmt.Errorf("id '%s' not found", id)
+		return fmt.Errorf("docId '%s' not found in the collection", id)
 	}
 
 	collection.IsChanged = true
@@ -378,10 +383,16 @@ func (collection *Collection) Delete(id string) error {
 }
 
 func (collection *Collection) GetIds() []string {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	return collection.DocumentIds
 }
 
 func (collection *Collection) GetAllData() []Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	documents := make([]Document, 0, len(collection.DocumentsMap))
 
 	for _, document := range collection.DocumentsMap {
@@ -400,6 +411,9 @@ func (collection *Collection) Clear() {
 }
 
 func (collection *Collection) Stats() CollectionStats {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	var statsMap = CollectionStats{
 		CollectionName: collection.CollectionName,
 		IndexKeys:      collection.IndexKeys,
@@ -469,6 +483,8 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 }
 
 func (collection *Collection) SaveCollectionToFile() {
+	collection.mu.RLock()
+
 	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
 
 	temp := CollectionFileStruct{
@@ -481,22 +497,28 @@ func (collection *Collection) SaveCollectionToFile() {
 		CollectionFullPath: collection.CollectionFullPath,
 		LastIndex:          collection.LastIndex,
 	}
+	collection.IsChanged = false
 
+	collection.mu.RUnlock()
+
+	go writeCollectionTofileBackground(temp)
+}
+
+func writeCollectionTofileBackground(temp CollectionFileStruct) {
 	gobData, err := utils.EncodeGob(temp)
 
 	if err != nil {
 		fmt.Println("GOB encoding error:", err)
 	}
 
-	err = utils.SaveToFile(collection.CollectionFullPath, gobData)
+	err = utils.SaveToFile(temp.CollectionFullPath, gobData)
 
 	if err != nil {
 		fmt.Println("Error saving collection GOB to file:", err)
 	}
 
-	fmt.Println("GOB data saved to ", collection.CollectionName)
+	fmt.Println("GOB data saved to ", temp.CollectionName)
 
-	collection.IsChanged = false
 }
 
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
@@ -544,12 +566,17 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 
 func (collection *Collection) StartTimerToSaveFile() {
 	for range time.Tick(TimerToSaveToDisk) {
-		collection.EventChannel <- Event{Type: utils.EVENT_SAVE_TO_DISK}
+		select {
+		case collection.EventChannel <- Event{Type: utils.EVENT_SAVE_TO_DISK}:
+			fmt.Println(" EVENT_SAVE_TO_DISK is sent to the channel")
+		default:
+			fmt.Println("EventChannel is full, skipping save event")
+		}
 	}
 }
 
 func (collection *Collection) StartInternalFunctions() {
-	go collection.StartTimerToSaveFile()
+	// go collection.StartTimerToSaveFile()
 	go collection.EventListener()
 }
 

@@ -48,14 +48,14 @@ func UIRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 		}
 
 		if len(filterQuery.CollectionName) > 0 {
-			result := service.DocumentFilter(gnoSQL, filterQuery.DatabaseName, filterQuery.CollectionName, filter)
+			result, _ := service.DocumentFilter(gnoSQL, filterQuery.DatabaseName, filterQuery.CollectionName, filter)
 
 			if len(result.Data) > 0 {
 				response = result.Data
 			}
 
 		} else {
-			result := service.GetAllCollections(gnoSQL, filterQuery.DatabaseName)
+			result, _ := service.GetAllCollections(gnoSQL, filterQuery.DatabaseName)
 
 			if len(result.Data) > 0 {
 

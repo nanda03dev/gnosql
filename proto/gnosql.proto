@@ -14,7 +14,6 @@ message DatabaseCreateRequest {
 
 message DatabaseCreateResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DatabaseResponse {
@@ -24,7 +23,6 @@ message DatabaseResponse {
 
 message DatabaseConnectResponse {
   DatabaseResponse data = 1;
-  string error = 2;
 }
 
 message DatabaseDeleteRequest {
@@ -33,17 +31,14 @@ message DatabaseDeleteRequest {
 
 message DatabaseDeleteResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DatabaseGetAllResponse {
   repeated string data = 1;
-  string error = 2;
 }
 
 message LoadToDiskResponse {
   string data = 1;
-  string error = 2;
 }
 
 message CollectionInput {
@@ -58,7 +53,6 @@ message CollectionCreateRequest {
 
 message CollectionCreateResponse {
   string data = 1;
-  string error = 2;
 }
 
 message CollectionDeleteRequest {
@@ -68,7 +62,6 @@ message CollectionDeleteRequest {
 
 message CollectionDeleteResponse {
   string data = 1;
-  string error = 2;
 }
 
 message CollectionGetAllRequest {
@@ -77,7 +70,6 @@ message CollectionGetAllRequest {
 
 message CollectionGetAllResponse {
   repeated string data = 1;
-  string error = 2;
 }
 
 message CollectionStatsRequest {
@@ -87,7 +79,6 @@ message CollectionStatsRequest {
 
 message CollectionStatsResponse {
   CollectionStats data = 1;
-  string error = 2;
 
 }
 
@@ -105,7 +96,6 @@ message DocumentCreateRequest {
 
 message DocumentCreateResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DocumentReadRequest {
@@ -116,7 +106,6 @@ message DocumentReadRequest {
 
 message DocumentReadResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DocumentFilterRequest {
@@ -127,7 +116,6 @@ message DocumentFilterRequest {
 
 message DocumentFilterResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DocumentUpdateRequest {
@@ -139,7 +127,6 @@ message DocumentUpdateRequest {
 
 message DocumentUpdateResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DocumentDeleteRequest {
@@ -150,7 +137,6 @@ message DocumentDeleteRequest {
 
 message DocumentDeleteResponse {
   string data = 1;
-  string error = 2;
 }
 
 message DocumentGetAllRequest {
@@ -160,7 +146,6 @@ message DocumentGetAllRequest {
 
 message DocumentGetAllResponse {
   string data = 1;
-  string error = 2;
 }
 
 service GnoSQLService {
