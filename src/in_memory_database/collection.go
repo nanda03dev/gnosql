@@ -28,7 +28,7 @@ type Event struct {
 }
 
 type CollectionStats struct {
-	CollectionName string   `json:"CollectionName"`
+	CollectionName string   `json:"collectionName"`
 	IndexKeys      []string `json:"IndexKeys"`
 	Documents      int      `json:"Documents"`
 }
@@ -38,6 +38,7 @@ const TimerToSaveToDisk = 1 * time.Minute
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
+	ParentDBName       string       `json:"ParentDBName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
@@ -52,6 +53,7 @@ type Collection struct {
 
 type CollectionFileStruct struct {
 	CollectionName     string       `json:"CollectionName"`
+	ParentDBName       string       `json:"ParentDBName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
@@ -77,6 +79,7 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 	collection :=
 		&Collection{
 			CollectionName:     collectionInput.CollectionName,
+			ParentDBName:       db.DatabaseName,
 			IndexKeys:          collectionInput.IndexKeys,
 			DocumentsMap:       make(DocumentsMap),
 			DocumentIds:        make(DocumentIds, 0),
@@ -101,6 +104,7 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 	for _, collectionGob := range collectionsGob {
 		collection := &Collection{
 			CollectionName:     collectionGob.CollectionName,
+			ParentDBName:       collectionGob.ParentDBName,
 			IndexKeys:          collectionGob.IndexKeys,
 			DocumentsMap:       collectionGob.DocumentsMap,
 			DocumentIds:        collectionGob.DocumentIds,
@@ -489,6 +493,7 @@ func (collection *Collection) SaveCollectionToFile() {
 
 	temp := CollectionFileStruct{
 		CollectionName:     collection.CollectionName,
+		ParentDBName:       collection.ParentDBName,
 		IndexKeys:          collection.IndexKeys,
 		DocumentsMap:       collection.DocumentsMap,
 		DocumentIds:        collection.DocumentIds,
@@ -564,24 +569,13 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	return gobData, nil
 }
 
-func (collection *Collection) StartTimerToSaveFile() {
-	for range time.Tick(TimerToSaveToDisk) {
-		select {
-		case collection.EventChannel <- Event{Type: utils.EVENT_SAVE_TO_DISK}:
-			fmt.Println(" EVENT_SAVE_TO_DISK is sent to the channel")
-		default:
-			fmt.Println("EventChannel is full, skipping save event")
-		}
-	}
-}
-
 func (collection *Collection) StartInternalFunctions() {
-	// go collection.StartTimerToSaveFile()
 	go collection.EventListener()
 }
 
 func (collection *Collection) EventListener() {
-	for event := range collection.EventChannel {
+	var collectionChannel = GetCollectionChannel(collection.ParentDBName, collection.CollectionName)
+	for event := range collectionChannel {
 
 		if event.Type == utils.EVENT_CREATE {
 			collection.Create(event.EventData)
