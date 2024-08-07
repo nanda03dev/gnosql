@@ -487,7 +487,7 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 }
 
 func (collection *Collection) SaveCollectionToFile() {
-	collection.mu.RLock()
+	collection.mu.Lock()
 
 	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
 
@@ -504,12 +504,18 @@ func (collection *Collection) SaveCollectionToFile() {
 	}
 	collection.IsChanged = false
 
-	collection.mu.RUnlock()
+	collection.mu.Unlock()
 
 	go writeCollectionTofileBackground(temp)
 }
 
 func writeCollectionTofileBackground(temp CollectionFileStruct) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Worker panic recovered: %v. \n", r)
+		}
+	}()
+
 	gobData, err := utils.EncodeGob(temp)
 
 	if err != nil {

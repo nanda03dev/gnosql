@@ -164,16 +164,7 @@ func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 		document["docId"] = utils.Generate16DigitUUID()
 	}
 
-	var EventDocument = make(in_memory_database.Document)
-
-	for key, value := range document {
-		EventDocument[key] = value
-	}
-
-	var createEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_CREATE,
-		EventData: EventDocument,
-	}
+	var createEvent in_memory_database.Event = GenerateCreateEvent(document)
 
 	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, createEvent)
 
@@ -244,15 +235,9 @@ func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 		existingDocument[key] = value
 	}
 
-	var updateEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_UPDATE,
-		Id:        id,
-		EventData: existingDocument,
-	}
+	var updateEvent in_memory_database.Event = GenerateUpdateEvent(existingDocument)
 
-	var collectionChannel = in_memory_database.GetCollectionChannel(db.DatabaseName, collection.CollectionName)
-
-	collectionChannel <- updateEvent
+	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, updateEvent)
 
 	result.Data = existingDocument
 
@@ -276,14 +261,9 @@ func DocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
-	var deleteEvent in_memory_database.Event = in_memory_database.Event{
-		Type: utils.EVENT_DELETE,
-		Id:   id,
-	}
+	var deleteEvent in_memory_database.Event = GenerateDeleteEvent(id)
 
-	var collectionChannel = in_memory_database.GetCollectionChannel(db.DatabaseName, collection.CollectionName)
-
-	collectionChannel <- deleteEvent
+	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, deleteEvent)
 
 	result.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
 
@@ -330,4 +310,39 @@ func validateDatabaseAndCollection(db *in_memory_database.Database, collection *
 		return err
 	}
 	return validateCollection(collection)
+}
+
+func GenerateCreateEvent(document in_memory_database.Document) in_memory_database.Event {
+	var EventDocument = make(in_memory_database.Document)
+
+	for key, value := range document {
+		EventDocument[key] = value
+	}
+
+	return in_memory_database.Event{
+		Type:      utils.EVENT_CREATE,
+		EventData: EventDocument,
+	}
+}
+
+func GenerateUpdateEvent(document in_memory_database.Document) in_memory_database.Event {
+	var EventDocument = make(in_memory_database.Document)
+	id := document["docId"]
+
+	for key, value := range document {
+		EventDocument[key] = value
+	}
+
+	return in_memory_database.Event{
+		Id:        id.(string),
+		Type:      utils.EVENT_UPDATE,
+		EventData: EventDocument,
+	}
+}
+
+func GenerateDeleteEvent(id string) in_memory_database.Event {
+	return in_memory_database.Event{
+		Id:   id,
+		Type: utils.EVENT_DELETE,
+	}
 }
