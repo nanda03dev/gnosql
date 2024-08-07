@@ -42,7 +42,7 @@ func GetCollectionChannel(databaseName string, collectionName string) chan Event
 	var channelName = databaseName + collectionName
 
 	if _, isExists := CollectionChannelInstance.channels[channelName]; !isExists {
-		CollectionChannelInstance.channels[channelName] = make(chan Event, 1000)
+		CollectionChannelInstance.channels[channelName] = make(chan Event, 10000)
 	}
 
 	var channel = CollectionChannelInstance.channels[channelName]

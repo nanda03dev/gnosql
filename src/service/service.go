@@ -164,9 +164,15 @@ func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 		document["docId"] = utils.Generate16DigitUUID()
 	}
 
+	var EventDocument = make(in_memory_database.Document)
+
+	for key, value := range document {
+		EventDocument[key] = value
+	}
+
 	var createEvent in_memory_database.Event = in_memory_database.Event{
 		Type:      utils.EVENT_CREATE,
-		EventData: document,
+		EventData: EventDocument,
 	}
 
 	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, createEvent)
