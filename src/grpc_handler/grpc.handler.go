@@ -195,7 +195,6 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 	}
 
 	result, err := service.DocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId, document)
-
 	if err != nil {
 		return response, err
 	}

@@ -24,7 +24,7 @@ func NewCollectionChannel() *CollectionChannel {
 
 func init() {
 	CollectionChannelInstance = NewCollectionChannel()
-	fmt.Printf("\n CollectionChannelInstance initialzed successfully %v ", CollectionChannelInstance)
+	fmt.Printf("\n CollectionChannelInstance initialzed successfully %v \n", CollectionChannelInstance)
 	go CollectionChannelInstance.StartTimerToSaveFile()
 }
 
@@ -34,6 +34,46 @@ func (cc *CollectionChannel) AddCollectionEvent(databaseName string, collectionN
 
 	var channel = GetCollectionChannel(databaseName, collectionName)
 	channel <- event
+}
+
+func (cc *CollectionChannel) GetCollectionChannelWithLock(databaseName string, collectionName string) chan Event {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+
+	return GetCollectionChannel(databaseName, collectionName)
+}
+
+func (cc *CollectionChannel) AddCollectionEventByChannelName(channelName string, event Event) {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+
+	var channel = CollectionChannelInstance.channels[channelName]
+	channel <- event
+}
+
+func (cc *CollectionChannel) GetAllCollections() []string {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	var channelNames []string
+
+	for channelName := range cc.channels {
+		channelNames = append(channelNames, channelName)
+	}
+	return channelNames
+
+}
+
+func (cc *CollectionChannel) StartTimerToSaveFile() {
+	for range time.Tick(TimerToSaveToDisk) {
+		fmt.Printf("\n ---------------------------------------------------------------- \n")
+		fmt.Printf("\n Ticker started. getting all channels\n")
+		for _, channelName := range cc.GetAllCollections() {
+			cc.AddCollectionEventByChannelName(channelName, Event{Type: utils.EVENT_SAVE_TO_DISK})
+		}
+		fmt.Printf("\n EVENT_SAVE_TO_DISK event sent to all colelction channels \n")
+		fmt.Printf("\n ---------------------------------------------------------------- \n")
+
+	}
 }
 
 func GetCollectionChannel(databaseName string, collectionName string) chan Event {
@@ -53,16 +93,5 @@ func DeleteCollectionChannel(databaseName string, collectionName string) {
 
 	if _, isExists := CollectionChannelInstance.channels[channelName]; isExists {
 		delete(CollectionChannelInstance.channels, channelName)
-	}
-}
-
-func (cc *CollectionChannel) StartTimerToSaveFile() {
-	for range time.Tick(TimerToSaveToDisk) {
-		cc.mu.Lock()
-		defer cc.mu.Unlock()
-
-		for _, channel := range cc.channels {
-			channel <- Event{Type: utils.EVENT_SAVE_TO_DISK}
-		}
 	}
 }

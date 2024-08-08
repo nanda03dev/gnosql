@@ -226,7 +226,6 @@ func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 	}
 
 	existingDocument := collection.Read(id)
-
 	if existingDocument == nil {
 		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}

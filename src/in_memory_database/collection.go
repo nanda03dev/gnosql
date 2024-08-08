@@ -34,7 +34,9 @@ type CollectionStats struct {
 }
 
 const EventChannelSize = 1 * 10 * 100 * 1000
-const TimerToSaveToDisk = 1 * time.Minute
+
+// const TimerToSaveToDisk = 1 * time.Minute
+const TimerToSaveToDisk = 30 * time.Second
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
@@ -149,7 +151,6 @@ func (collection *Collection) Create(document Document) Document {
 
 	collection.IsChanged = true
 	collection.LastIndex = documentIndex
-
 	return document
 }
 
@@ -485,7 +486,9 @@ func (collection *Collection) SaveCollectionToFile() {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
 
-	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
+	if !collection.IsChanged {
+		return
+	}
 
 	temp := CollectionFileStruct{
 		CollectionName:     collection.CollectionName,
@@ -522,8 +525,7 @@ func writeCollectionTofileBackground(temp CollectionFileStruct) {
 		fmt.Println("Error saving collection GOB to file:", err)
 	}
 
-	fmt.Println("GOB data saved to ", temp.CollectionName)
-
+	fmt.Printf("\n EVENT_SAVE_TO_DISK : GOB data saved to %v \n", temp.CollectionName)
 }
 
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
@@ -574,8 +576,11 @@ func (collection *Collection) StartInternalFunctions() {
 }
 
 func (collection *Collection) EventListener() {
-	var collectionChannel = GetCollectionChannel(collection.ParentDBName, collection.CollectionName)
-	for event := range collectionChannel {
+	var collectionChannelName = collection.ParentDBName + collection.CollectionName
+	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.ParentDBName, collection.CollectionName)
+	for {
+
+		event := <-collectionChannel
 
 		if event.Type == utils.EVENT_CREATE {
 			collection.Create(event.EventData)
@@ -587,9 +592,8 @@ func (collection *Collection) EventListener() {
 			collection.Delete(event.Id)
 		}
 		if event.Type == utils.EVENT_SAVE_TO_DISK {
-			if collection.IsChanged {
-				collection.SaveCollectionToFile()
-			}
+			collection.SaveCollectionToFile()
+			fmt.Printf("\n EVENT_SAVE_TO_DISK : %v done\n", collectionChannelName)
 		}
 		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
 			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
