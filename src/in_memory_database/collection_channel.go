@@ -33,9 +33,7 @@ func (cc *CollectionChannel) AddCollectionEvent(databaseName string, collectionN
 	defer cc.mu.Unlock()
 
 	var channel = GetCollectionChannel(databaseName, collectionName)
-
 	channel <- event
-
 }
 
 func GetCollectionChannel(databaseName string, collectionName string) chan Event {
@@ -50,8 +48,19 @@ func GetCollectionChannel(databaseName string, collectionName string) chan Event
 	return channel
 }
 
+func DeleteCollectionChannel(databaseName string, collectionName string) {
+	var channelName = databaseName + collectionName
+
+	if _, isExists := CollectionChannelInstance.channels[channelName]; isExists {
+		delete(CollectionChannelInstance.channels, channelName)
+	}
+}
+
 func (cc *CollectionChannel) StartTimerToSaveFile() {
 	for range time.Tick(TimerToSaveToDisk) {
+		cc.mu.Lock()
+		defer cc.mu.Unlock()
+
 		for _, channel := range cc.channels {
 			channel <- Event{Type: utils.EVENT_SAVE_TO_DISK}
 		}

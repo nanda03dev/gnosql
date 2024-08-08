@@ -46,7 +46,6 @@ type Collection struct {
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
 	LastIndex          int          `json:"LastIndex"`
-	EventChannel       chan Event
 	mu                 sync.RWMutex
 	IsChanged          bool
 }
@@ -87,7 +86,6 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
 			mu:                 sync.RWMutex{},
-			EventChannel:       make(chan Event, EventChannelSize),
 			IsChanged:          false,
 			LastIndex:          0,
 		}
@@ -112,7 +110,6 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
 			LastIndex:          collectionGob.LastIndex,
-			EventChannel:       make(chan Event, EventChannelSize),
 			mu:                 sync.RWMutex{},
 			IsChanged:          false,
 		}
@@ -128,8 +125,7 @@ func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
 	if !IsDbDeleted {
 		utils.DeleteFile(collection.CollectionFullPath)
 	}
-	collection.EventChannel <- Event{Type: utils.EVENT_STOP_GO_ROUTINE}
-	collection.Clear()
+	CollectionChannelInstance.AddCollectionEvent(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) Create(document Document) Document {
@@ -357,7 +353,6 @@ outerLoop:
 func (collection *Collection) Update(id string, updatedDocument Document) Document {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
-
 	if _, exists := collection.DocumentsMap[id]; !exists {
 		return nil
 	}
@@ -488,6 +483,7 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 
 func (collection *Collection) SaveCollectionToFile() {
 	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
 	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
 
@@ -504,9 +500,7 @@ func (collection *Collection) SaveCollectionToFile() {
 	}
 	collection.IsChanged = false
 
-	collection.mu.Unlock()
-
-	go writeCollectionTofileBackground(temp)
+	writeCollectionTofileBackground(temp)
 }
 
 func writeCollectionTofileBackground(temp CollectionFileStruct) {
