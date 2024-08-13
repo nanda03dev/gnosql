@@ -6,6 +6,10 @@ GnoSQL is a lightweight, in-memory NoSQL database implemented in Go. It offers a
 
 -   [Nandakumar](https://github.com/nanda03dev/)
 
+## Github repo
+
+-   [GnoSQL](https://github.com/nanda03dev/gnosql)
+
 ## Installation
 
 1. Run the following command to pull gnosql image:
@@ -60,23 +64,44 @@ The database files are stored in the container path "/root/gnosql/db". To persis
 
 [GnoSQL Client](https://pkg.go.dev/github.com/nanda03dev/gnosql_client) is the Go library to connect with the GnoSQL database.
 
-### Database Endpoints
+## Architecture
 
-    * [POST]   /database/add
-    * [POST]   /database/connect
-    * [POST]   /database/delete
-    * [GET]    /database/get-all
-    * [POST]   /collection/{databaseName}/add
-    * [POST]   /collection/{databaseName}/delete
-    * [GET]    /collection/{databaseName}/get-all
-    * [GET]    /collection/{databaseName}/{collectionName}/stats
-    * [POST]   /document/{databaseName}/{collectionName}/
-    * [GET]    /document/{databaseName}/{collectionName}/{id}
-    * [POST]   /document/{databaseName}/{collectionName}/filter
-    * [PUT]    /document/{databaseName}/{collectionName}/{id}
-    * [DELETE] /document/{databaseName}/{collectionName}/{id}
-    * [GET]    /document/{databaseName}/{collectionName}/all-data
+The database is structured to handle multiple operations across various collections in a concurrent yet synchronized manner. The architecture comprises the following key components:
 
-#### Swagger Documentation
+- **gRPC Handler**: Receives gnosql-client requests and forwards them to the service handler.
+- **Service Handler**: Validates incoming requests, creates events, and pushes them into the appropriate collection channels.
+- **Workers**: Each collection has a dedicated worker that listens to its respective channel, processes events, and performs the corresponding CRUD operation.
 
-    Explore the API using Swagger: [Swagger Documentation](/swagger/index.html#/)
+## Key Components
+
+### gRPC Handler
+
+The gRPC Handler is the entry point for all client requests. It is responsible for receiving incoming requests and passing them to the service handler for further processing. This handler ensures that the requests are handled asynchronously and efficiently.
+
+### Service Handler
+
+The Service Handler is where the core logic of the request processing happens:
+
+1. **Validation**: The incoming request is first validated to ensure all necessary inputs are correct and complete.
+2. **Event Creation**: Once validated, an event is created that encapsulates the operation to be performed.
+3. **Event Dispatch**: The event is then pushed into the appropriate channel associated with the collection that the operation targets.
+
+### Worker
+
+Workers are the heart of the concurrency model in this database:
+
+- Each collection within the database has its own worker.
+- Workers continuously listen to their respective channels for new events.
+- Upon receiving an event, a worker processes it by executing the appropriate operation (create, update, delete) on the collection.
+- Operations are processed sequentially within each collection to maintain data consistency.
+
+## Operation Flow
+
+The flow of operations in the GnoSQL Database is as follows:
+
+1. **Client Request**: A request is sent from the gnosql-client and received by the gRPC Handler.
+2. **Request Validation**: The Service Handler validates the request.
+3. **Event Creation and Dispatch**: A valid request leads to the creation of an event, which is then dispatched to the correct collection's channel, After the event is pushed, the Service Handler sends an acknowledgment to the gRPC Handler, which then responds to the client.
+4. **Worker Processing**: The worker associated with the collection processes the event, ensuring operations are performed in sequence.
+
+This flow ensures that while multiple operations can be processed concurrently, they are done so in a way that maintains the integrity and consistency of the data.
