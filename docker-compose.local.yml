@@ -3,7 +3,6 @@ name: gnosql-local
 services:
     gnosql:
         container_name: "gnosql-local"
-        image: gnosql-local
         build:
             context: .
             dockerfile: Dockerfile.local

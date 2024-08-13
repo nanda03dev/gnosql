@@ -3,7 +3,7 @@ name: gnosql
 services:
     gnosql:
         container_name: "gnosql"
-        image: nanda23311/gnosql:latest
+        image: nanda03dev/gnosql:latest
         ports:
             - 5454:5454
         volumes:

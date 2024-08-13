@@ -3,7 +3,6 @@ name: gnosql
 services:
     gnosql:
         container_name: "gnosql"
-        image: gnosql
         build:
             context: .
             dockerfile: Dockerfile.prod
