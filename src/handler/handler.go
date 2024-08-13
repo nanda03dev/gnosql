@@ -19,17 +19,36 @@ import (
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
-	var result = in_memory_database.DatabaseCreateResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceCreateDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result, err := service.CreateDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
-	c.JSON(http.StatusCreated, result)
+	c.JSON(GetResponse(result, err))
+}
+
+// @Summary      Connect to database
+// @Description  Connect database
+// @Tags         database
+// @Produce      json
+// @Param        database  body in_memory_database.DatabaseCreateRequest  true  "Database"
+// @Success      200 in_memory_database.DatabaseConnectResult
+// @Success      400 "Something went wrong"
+// @Router       /database/connect [post]
+func ConnectDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
+	var requestBody in_memory_database.DatabaseCreateRequest
+
+	if err := c.BindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		return
+	}
+
+	result := service.ConnectDatabase(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+
+	c.JSON(GetResponse(result, nil))
 }
 
 // @Summary      Delete database
@@ -43,17 +62,14 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseDeleteRequest
 
-	var result = in_memory_database.DatabaseDeleteResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDeleteDatabase(gnoSQL, requestBody.DatabaseName)
+	result, err := service.DeleteDatabase(gnoSQL, requestBody.DatabaseName)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Get all database
@@ -63,11 +79,8 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/get-all [get]
 func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-
-	result := service.ServiceGetAllDatabase(gnoSQL)
-
-	// Send the JSON response
-	c.JSON(http.StatusOK, result)
+	result, err := service.GetAllDatabase(gnoSQL)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Load database to disk
@@ -77,9 +90,9 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Success      200 {array} string
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-	result := service.ServiceLoadToDisk(gnoSQL)
+	result, err := service.LoadToDisk(gnoSQL)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Create new collection
@@ -93,17 +106,15 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /collection/{databaseName}/add [post]
 func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionCreateRequest
-	var result = in_memory_database.CollectionCreateResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceCreateCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result, err := service.CreateCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
-	c.JSON(http.StatusCreated, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Delete collection
@@ -118,17 +129,15 @@ func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
 	var requestBody in_memory_database.CollectionDeleteRequest
-	var result = in_memory_database.CollectionDeleteResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDeleteCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
+	result, err := service.DeleteCollections(gnoSQL, requestBody.DatabaseName, requestBody.Collections)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Get all collections
@@ -140,18 +149,15 @@ func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Router       /collection/{databaseName}/get-all [get]
 func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionGetAllRequest
-	var result = in_memory_database.CollectionGetAllResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceGetAllCollections(gnoSQL, requestBody.DatabaseName)
+	result, err := service.GetAllCollections(gnoSQL, requestBody.DatabaseName)
 
-	// Send the JSON response
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Collection stats
@@ -166,17 +172,15 @@ func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
 	var requestBody in_memory_database.CollectionStatsRequest
-	var result = in_memory_database.CollectionStatsResult{}
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceGetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
+	result, err := service.GetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 
 }
 
@@ -194,17 +198,14 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
 	var requestBody in_memory_database.DocumentCreateRequest
 
-	var result = in_memory_database.DocumentCreateResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
+	result, err := service.DocumentCreate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Document)
 
-	c.JSON(http.StatusCreated, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Read by id
@@ -220,17 +221,14 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentReadRequest
 
-	var result = in_memory_database.DocumentReadResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result, err := service.DocumentRead(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Filter document
@@ -246,17 +244,14 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentFilterRequest
 
-	var result = in_memory_database.DocumentFilterResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
+	result, err := service.DocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Update document
@@ -273,17 +268,14 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentUpdateRequest
 
-	var result = in_memory_database.DocumentUpdateResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id, requestBody.Document)
+	result, err := service.DocumentUpdate(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId, requestBody.Document)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Delete document
@@ -299,17 +291,14 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentDeleteRequest
 
-	var result = in_memory_database.DocumentDeleteResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Id)
+	result, err := service.DocumentDelete(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.DocId)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
 }
 
 // @Summary      Read all document
@@ -324,15 +313,20 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentGetAllRequest
 
-	var result = in_memory_database.DocumentGetAllResult{}
-
 	if err := c.BindJSON(&requestBody); err != nil {
-		result.Error = utils.ERROR_WHILE_BINDING_JSON
-		c.JSON(http.StatusBadRequest, result)
+		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
-	result = service.ServiceDocumentGetAll(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
+	result, err := service.DocumentGetAll(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(GetResponse(result, err))
+}
+
+func GetResponse(result interface{}, err error) (int, interface{}) {
+	if err != nil {
+		return http.StatusOK, result
+	} else {
+		return http.StatusBadRequest, err
+	}
 }

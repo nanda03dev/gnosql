@@ -5,16 +5,68 @@ import (
 	"gnosql/src/handler"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/seed"
+	"gnosql/src/service"
+	// "html/template"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+type FilterQuery struct {
+	DatabaseName   string `form:"databaseName"`
+	CollectionName string `form:"collectionName"`
+	DocumentId     string `form:"documentId"`
+}
 
 func RouterInit(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 	SeedRoute(ginRouter, gnoSQL)
 	DatabaseRoutes(ginRouter, gnoSQL)
 	CollectionRoutes(ginRouter, gnoSQL)
 	DocumentRoutes(ginRouter, gnoSQL)
+	UIRoutes(ginRouter, gnoSQL)
+}
+
+func UIRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
+	ginRouter.GET("/gnosql-ui", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
+	})
+	ginRouter.POST("/gnosql-ui/submit", func(c *gin.Context) {
+		var filterQuery FilterQuery
+		var response []in_memory_database.Document
+
+		if err := c.ShouldBind(&filterQuery); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var filter in_memory_database.MapInterface
+
+		if len(filterQuery.DocumentId) > 10 {
+			filter = in_memory_database.MapInterface{
+				"docId": filterQuery.DocumentId,
+			}
+		}
+
+		if len(filterQuery.CollectionName) > 0 {
+			result, _ := service.DocumentFilter(gnoSQL, filterQuery.DatabaseName, filterQuery.CollectionName, filter)
+
+			if len(result.Data) > 0 {
+				response = result.Data
+			}
+
+		} else {
+			result, _ := service.GetAllCollections(gnoSQL, filterQuery.DatabaseName)
+
+			if len(result.Data) > 0 {
+
+				for _, collectionName := range result.Data {
+					response = append(response, in_memory_database.Document{"collectionName": collectionName})
+				}
+			}
+		}
+
+		c.HTML(http.StatusOK, "table.html", gin.H{"data": response})
+	})
 }
 
 // @Summary      generate seed database
@@ -39,6 +91,10 @@ func DatabaseRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 	DatabaseRoutesGroup := ginRouter.Group(path)
 	{
+		DatabaseRoutesGroup.POST("/connect", func(c *gin.Context) {
+			handler.ConnectDatabase(c, gnoSQL)
+		})
+
 		DatabaseRoutesGroup.POST("/add", func(c *gin.Context) {
 			handler.CreateDatabase(c, gnoSQL)
 		})
@@ -119,4 +175,5 @@ func DocumentRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 			handler.ReadAllDocument(c, gnoSQL)
 		})
 	}
+
 }

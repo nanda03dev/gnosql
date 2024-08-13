@@ -61,7 +61,6 @@ func LoadDatabase(database DatabaseFileStruct) *Database {
 }
 
 func (db *Database) DeleteDatabase() {
-	println("DatabaseFolderPath ", db.DatabaseFolderPath)
 
 	os.RemoveAll(db.DatabaseFolderPath)
 
@@ -117,6 +116,13 @@ func (db *Database) GetColl(collectionName string) *Collection {
 		}
 	}
 	return nil
+}
+func (db *Database) GetCollectionNames() []string {
+	var colelctionNames []string
+	for _, collection := range db.Collections {
+		colelctionNames = append(colelctionNames, collection.CollectionName)
+	}
+	return colelctionNames
 }
 
 func (db *Database) SaveDatabaseToFile() {

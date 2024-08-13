@@ -25,6 +25,7 @@ import (
 	"gnosql/src/in_memory_database"
 	"gnosql/src/router"
 	"gnosql/src/utils"
+	"html/template"
 	"log"
 	"net"
 	"os"
@@ -43,6 +44,7 @@ const (
 // @BasePath /api/v1
 func main() {
 	ginRouter := gin.Default()
+	ginRouter.SetHTMLTemplate(template.Must(template.ParseGlob("./src/templates/*")))
 
 	port := os.Getenv("PORT")
 

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GnoSQL DB-Viewer</title>
+    <script src="https://unpkg.com/htmx.org@1.7.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f4f4f9;
+        }
+
+        .sidebar {
+            width: 25%;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            background-color: #b0e0e6;
+            /* Powder blue */
+            color: #333;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .sidebar form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar div {
+            margin-bottom: 15px;
+        }
+
+        .sidebar label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .sidebar input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .sidebar button {
+            background-color: #ffffff;
+            color: #007acc;
+            border: 2px solid #007acc;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .sidebar button:hover {
+            background-color: #007acc;
+            color: white;
+        }
+
+        .content {
+            width: 75%;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007acc;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+
+        .icon {
+            margin-right: 8px;
+            color: #007acc;
+        }
+
+        .error {
+            color: red;
+            font-size: 0.875em;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fas fa-database icon"></i>GnoSQL DB-Viewer</h2>
+        <form id="data-form" hx-post="/gnosql-ui/submit" hx-target="#data-table" hx-swap="innerHTML">
+            <div>
+                <label for="databaseName"><i class="fas fa-database icon"></i>Database name:</label>
+                <input type="text" id="databaseName" name="databaseName" required value="gcart">
+            </div>
+            <div>
+                <label for="collectionName"><i class="fas fa-box icon"></i>Collection name:</label>
+                <input type="text" id="collectionName" name="collectionName">
+            </div>
+            <div>
+                <label for="documentId"><i class="fas fa-box icon"></i>Document ID:</label>
+                <input type="text" id="documentId" name="documentId">
+            </div>
+            <div id="IdError" class="error"></div>
+            <button type="submit"><i class="fas fa-search icon"></i>Fetch</button>
+        </form>
+    </div>
+
+    <div class="content">
+        <div id="data-table">
+            <!-- Data table will be dynamically loaded here -->
+        </div>
+    </div>
+    <script>
+        document.getElementById('data-form').addEventListener('submit', function (event) {
+            const collectionName = document.getElementById('collectionName').value;
+            const documentId = document.getElementById('documentId').value;
+            const errorDiv = document.getElementById('IdError');
+
+            if (collectionName && collectionName.length < 2) {
+                errorDiv.textContent = 'Invalid collectionName. It must greater than 2 characters';
+                event.preventDefault(); // Prevent form submission
+            } else if (documentId && documentId.length !== 36) {
+                errorDiv.textContent = 'Invalid Document ID. It must be 36 characters long.';
+                event.preventDefault(); // Prevent form submission
+            } else {
+                errorDiv.textContent = ''; // Clear error message if valid
+            }
+        });
+    </script>
+
+</body>
+
+</html>

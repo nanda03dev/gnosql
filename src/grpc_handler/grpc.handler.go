@@ -3,7 +3,7 @@ package grpc_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	pb "gnosql/proto"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
@@ -22,69 +22,74 @@ func (s *GnoSQLServer) CreateNewDatabase(ctx context.Context,
 	response := &pb.DatabaseCreateResponse{}
 	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
 
-	result := service.ServiceCreateDatabase(s.GnoSQL, req.DatabaseName, collectionsInput)
+	result, err := service.CreateDatabase(s.GnoSQL, req.DatabaseName, collectionsInput)
 
 	response.Data = result.Data
-	response.Error = result.Error
+	return response, err
+
+}
+
+func (s *GnoSQLServer) ConnectDatabase(ctx context.Context,
+	req *pb.DatabaseCreateRequest) (*pb.DatabaseConnectResponse, error) {
+
+	response := &pb.DatabaseConnectResponse{}
+	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
+
+	result := service.ConnectDatabase(s.GnoSQL, req.DatabaseName, collectionsInput)
+
+	response.Data = &pb.DatabaseResponse{
+		DatabaseName: result.Data.DatabaseName,
+		Collections:  result.Data.Collections,
+	}
+
 	return response, nil
 
 }
 
 func (s *GnoSQLServer) DeleteDatabase(ctx context.Context, req *pb.DatabaseDeleteRequest) (*pb.DatabaseDeleteResponse, error) {
-
 	var response = &pb.DatabaseDeleteResponse{}
 
-	result := service.ServiceDeleteDatabase(s.GnoSQL, req.DatabaseName)
-
+	result, err := service.DeleteDatabase(s.GnoSQL, req.DatabaseName)
 	response.Data = result.Data
-	response.Error = result.Error
-	return response, nil
+
+	return response, err
 }
 
 func (s *GnoSQLServer) GetAllDatabases(ctx context.Context, req *pb.NoRequestBody) (*pb.DatabaseGetAllResponse, error) {
 	var response = &pb.DatabaseGetAllResponse{}
 
-	result := service.ServiceGetAllDatabase(s.GnoSQL)
-
+	result, err := service.GetAllDatabase(s.GnoSQL)
 	response.Data = result.Data
-	response.Error = result.Error
 
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) LoadToDisk(ctx context.Context, req *pb.NoRequestBody) (*pb.LoadToDiskResponse, error) {
 	var response = &pb.LoadToDiskResponse{}
 
-	result := service.ServiceLoadToDisk(s.GnoSQL)
-
+	result, err := service.LoadToDisk(s.GnoSQL)
 	response.Data = result.Data
-	response.Error = result.Error
 
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) CreateNewCollection(ctx context.Context, req *pb.CollectionCreateRequest) (*pb.CollectionCreateResponse, error) {
 	response := &pb.CollectionCreateResponse{}
-
 	var collectionsInput = ConvertReqToCollectionInput(req.GetCollections())
 
-	result := service.ServiceCreateCollections(s.GnoSQL, req.DatabaseName, collectionsInput)
-
+	result, err := service.CreateCollections(s.GnoSQL, req.DatabaseName, collectionsInput)
 	response.Data = result.Data
-	response.Error = result.Error
 
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) DeleteCollections(ctx context.Context, req *pb.CollectionDeleteRequest) (*pb.CollectionDeleteResponse, error) {
 	response := &pb.CollectionDeleteResponse{}
 
-	result := service.ServiceDeleteCollections(s.GnoSQL, req.DatabaseName, req.GetCollections())
-
+	result, err := service.DeleteCollections(s.GnoSQL, req.DatabaseName, req.GetCollections())
 	response.Data = result.Data
-	response.Error = result.Error
 
-	return response, nil
+	return response, err
 
 }
 
@@ -92,19 +97,17 @@ func (s *GnoSQLServer) GetAllCollections(ctx context.Context, req *pb.Collection
 
 	response := &pb.CollectionGetAllResponse{}
 
-	result := service.ServiceGetAllCollections(s.GnoSQL, req.DatabaseName)
-
+	result, err := service.GetAllCollections(s.GnoSQL, req.DatabaseName)
 	response.Data = result.Data
-	response.Error = result.Error
 
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) GetCollectionStats(ctx context.Context, req *pb.CollectionStatsRequest) (*pb.CollectionStatsResponse, error) {
 
 	response := &pb.CollectionStatsResponse{}
 
-	result := service.ServiceGetCollectionStats(s.GnoSQL, req.DatabaseName, req.CollectionName)
+	result, err := service.GetCollectionStats(s.GnoSQL, req.DatabaseName, req.CollectionName)
 
 	response.Data = &pb.CollectionStats{
 		CollectionName: result.Data.CollectionName,
@@ -112,9 +115,7 @@ func (s *GnoSQLServer) GetCollectionStats(ctx context.Context, req *pb.Collectio
 		Documents:      int32(result.Data.Documents),
 	}
 
-	response.Error = result.Error
-
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreateRequest) (*pb.DocumentCreateResponse, error) {
@@ -126,31 +127,36 @@ func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreat
 	UnMarsalErr := json.Unmarshal([]byte(req.Document), &newDocument)
 
 	if UnMarsalErr != nil {
-		response.Error = utils.ERROR_WHILE_UNMARSHAL_JSON
-		return response, nil
+		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
-	result := service.ServiceDocumentCreate(s.GnoSQL, req.DatabaseName, req.CollectionName, newDocument)
+	result, err := service.DocumentCreate(s.GnoSQL, req.DatabaseName, req.CollectionName, newDocument)
 
-	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
+	if err != nil {
+		return response, err
+	}
 
-	response.Data = Data
-	response.Error = Error
+	resultString, err := ConvertDocumentMapToString(result.Data)
 
-	return response, nil
+	response.Data = resultString
+
+	return response, err
 }
 
 func (s *GnoSQLServer) ReadDocument(ctx context.Context, req *pb.DocumentReadRequest) (*pb.DocumentReadResponse, error) {
 	response := &pb.DocumentReadResponse{}
 
-	result := service.ServiceDocumentRead(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id)
+	result, err := service.DocumentRead(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId)
 
-	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
+	resultString, err := ConvertDocumentMapToString(result.Data)
 
-	response.Data = Data
-	response.Error = Error
+	if err != nil {
+		return response, err
+	}
 
-	return response, nil
+	response.Data = resultString
+
+	return response, err
 }
 
 func (s *GnoSQLServer) FilterDocument(ctx context.Context, req *pb.DocumentFilterRequest) (*pb.DocumentFilterResponse, error) {
@@ -161,18 +167,20 @@ func (s *GnoSQLServer) FilterDocument(ctx context.Context, req *pb.DocumentFilte
 	UnMarsalErr := json.Unmarshal([]byte(req.Filter), &filter)
 
 	if UnMarsalErr != nil {
-		response.Error = utils.ERROR_WHILE_UNMARSHAL_JSON
-		return response, nil
+		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
-	result := service.ServiceDocumentFilter(s.GnoSQL, req.DatabaseName, req.CollectionName, filter)
+	result, err := service.DocumentFilter(s.GnoSQL, req.DatabaseName, req.CollectionName, filter)
 
-	Data, Error := ConvertDocumentMapsToString(result.Data, result.Error)
+	if err != nil {
+		return response, err
+	}
 
-	response.Data = Data
-	response.Error = Error
+	resultString, err := ConvertDocumentMapsToString(result.Data)
 
-	return response, nil
+	response.Data = resultString
+
+	return response, err
 }
 
 func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdateRequest) (*pb.DocumentUpdateResponse, error) {
@@ -183,44 +191,49 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 	UnMarsalErr := json.Unmarshal([]byte(req.Document), &document)
 
 	if UnMarsalErr != nil {
-		response.Error = utils.ERROR_WHILE_UNMARSHAL_JSON
-		return response, nil
+		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
-	result := service.ServiceDocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id, document)
+	result, err := service.DocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId, document)
+	if err != nil {
+		return response, err
+	}
 
-	Data, Error := ConvertDocumentMapToString(result.Data, result.Error)
+	resultString, err := ConvertDocumentMapToString(result.Data)
 
-	response.Data = Data
-	response.Error = Error
+	response.Data = resultString
 
-	return response, nil
+	return response, err
 }
 
 func (s *GnoSQLServer) DeleteDocument(ctx context.Context, req *pb.DocumentDeleteRequest) (*pb.DocumentDeleteResponse, error) {
 	response := &pb.DocumentDeleteResponse{}
 
-	result := service.ServiceDocumentDelete(s.GnoSQL, req.DatabaseName, req.CollectionName, req.Id)
+	result, err := service.DocumentDelete(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId)
+	if err != nil {
+		return response, err
+	}
 
 	response.Data = result.Data
-	response.Error = result.Error
 	return response, nil
 }
 
 func (s *GnoSQLServer) GetAllDocuments(ctx context.Context, req *pb.DocumentGetAllRequest) (*pb.DocumentGetAllResponse, error) {
 	response := &pb.DocumentGetAllResponse{}
 
-	result := service.ServiceDocumentGetAll(s.GnoSQL, req.DatabaseName, req.CollectionName)
+	result, err := service.DocumentGetAll(s.GnoSQL, req.DatabaseName, req.CollectionName)
 
-	Data, Error := ConvertDocumentMapsToString(result.Data, result.Error)
+	if err != nil {
+		return response, err
+	}
 
-	response.Data = Data
-	response.Error = Error
+	resultString, err := ConvertDocumentMapsToString(result.Data)
 
-	return response, nil
+	response.Data = resultString
+
+	return response, err
 }
 func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_database.CollectionInput {
-	fmt.Printf("ConvertReqToCollectionInput")
 
 	var collectionsInput []in_memory_database.CollectionInput
 
@@ -235,20 +248,23 @@ func ConvertReqToCollectionInput(collections []*pb.CollectionInput) []in_memory_
 	return collectionsInput
 }
 
-func ConvertDocumentMapToString(document in_memory_database.Document, gRPCError string) (string, string) {
+func ConvertDocumentMapToString(document in_memory_database.Document) (string, error) {
+
 	responseDataString, MarshalErr := json.Marshal(document)
 
 	if MarshalErr != nil {
-		return "", utils.ERROR_WHILE_MARSHAL_JSON
+		return "", errors.New(utils.ERROR_WHILE_MARSHAL_JSON)
 	}
-	return string(responseDataString), gRPCError
+
+	return string(responseDataString), nil
+
 }
 
-func ConvertDocumentMapsToString(document []in_memory_database.Document, gRPCError string) (string, string) {
+func ConvertDocumentMapsToString(document []in_memory_database.Document) (string, error) {
 	responseDataString, MarshalErr := json.Marshal(document)
 
 	if MarshalErr != nil {
-		return "", utils.ERROR_WHILE_MARSHAL_JSON
+		return "", errors.New(utils.ERROR_WHILE_MARSHAL_JSON)
 	}
-	return string(responseDataString), gRPCError
+	return string(responseDataString), nil
 }

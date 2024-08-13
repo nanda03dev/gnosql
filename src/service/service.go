@@ -1,50 +1,63 @@
 package service
 
 import (
-	"fmt"
+	"errors"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/utils"
 )
 
-func ServiceCreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseCreateResult {
+func ConnectDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseConnectResult {
+	var result = in_memory_database.DatabaseConnectResult{}
+
+	db := gnoSQL.GetDB(DatabaseName)
+
+	if db == nil {
+		db = gnoSQL.CreateDB(DatabaseName, collectionsInput)
+	} else {
+		db.CreateColls(collectionsInput)
+	}
+
+	result.Data = in_memory_database.DatabaseResult{
+		DatabaseName: db.DatabaseName,
+		Collections:  db.GetCollectionNames(),
+	}
+
+	return result
+}
+
+func CreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) (in_memory_database.DatabaseCreateResult, error) {
 	var result = in_memory_database.DatabaseCreateResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	fmt.Printf("\n collectionsInput %v \n ", collectionsInput)
-
 	if db != nil {
-		result.Error = "Database already exists"
-		return result
+		return result, errors.New("Database already exists")
 	}
 
 	gnoSQL.CreateDB(DatabaseName, collectionsInput)
 
 	result.Data = utils.DATABASE_CREATE_SUCCESS_MSG
 
-	return result
+	return result, nil
 }
 
-func ServiceDeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.DatabaseDeleteResult {
+func DeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) (in_memory_database.DatabaseDeleteResult, error) {
 	var result = in_memory_database.DatabaseDeleteResult{}
 
-	fmt.Printf("\n DatabaseName %v\n ", DatabaseName)
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-
-		return result
+	if err := validateDatabase(db); err != nil {
+		return result, err
 	}
 
 	gnoSQL.DeleteDB(db)
 
 	result.Data = utils.DATABASE_DELETE_SUCCESS_MSG
 
-	return result
+	return result, nil
 }
 
-func ServiceGetAllDatabase(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseGetAllResult {
+func GetAllDatabase(gnoSQL *in_memory_database.GnoSQL) (in_memory_database.DatabaseGetAllResult, error) {
 	var result = in_memory_database.DatabaseGetAllResult{}
 
 	databaseNames := make([]string, 0)
@@ -55,62 +68,57 @@ func ServiceGetAllDatabase(gnoSQL *in_memory_database.GnoSQL) in_memory_database
 
 	result.Data = databaseNames
 
-	return result
+	return result, nil
 }
 
-func ServiceLoadToDisk(gnoSQL *in_memory_database.GnoSQL) in_memory_database.DatabaseLoadToDiskResult {
+func LoadToDisk(gnoSQL *in_memory_database.GnoSQL) (in_memory_database.DatabaseLoadToDiskResult, error) {
 	var result = in_memory_database.DatabaseLoadToDiskResult{}
 
 	go gnoSQL.WriteAllDBs()
 
 	result.Data = utils.DATABASE_LOAD_TO_DISK_MSG
-	return result
+	return result, nil
 }
 
-func ServiceCreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.CollectionCreateResult {
+func CreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) (in_memory_database.CollectionCreateResult, error) {
 	var result = in_memory_database.CollectionCreateResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
+	if err := validateDatabase(db); err != nil {
+		return result, err
 	}
 
 	db.CreateColls(collectionsInput)
 
 	result.Data = utils.COLLECTION_CREATE_SUCCESS_MSG
 
-	return result
+	return result, nil
 }
 
-func ServiceDeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collections []string) in_memory_database.CollectionDeleteResult {
+func DeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collections []string) (in_memory_database.CollectionDeleteResult, error) {
 	var result = in_memory_database.CollectionDeleteResult{}
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
+	if err := validateDatabase(db); err != nil {
+		return result, err
 	}
 
 	db.DeleteColls(collections)
 
 	result.Data = utils.COLLECTION_DELETE_SUCCESS_MSG
 
-	return result
+	return result, nil
 }
 
-func ServiceGetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) in_memory_database.CollectionGetAllResult {
+func GetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) (in_memory_database.CollectionGetAllResult, error) {
 	var result = in_memory_database.CollectionGetAllResult{}
-
-	println("DatabaseName ", DatabaseName)
 
 	db := gnoSQL.GetDB(DatabaseName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
+	if err := validateDatabase(db); err != nil {
+		return result, err
 	}
 
 	allCollections := db.Collections
@@ -123,213 +131,217 @@ func ServiceGetAllCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName st
 
 	result.Data = collections
 
-	return result
+	return result, nil
 }
 
-func ServiceGetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, CollectionName string) in_memory_database.CollectionStatsResult {
+func GetCollectionStats(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, CollectionName string) (in_memory_database.CollectionStatsResult, error) {
 	var result = in_memory_database.CollectionStatsResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	stats := collection.Stats()
 	result.Data = stats
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentCreate(gnoSQL *in_memory_database.GnoSQL,
-	DatabaseName string, CollectionName string, document in_memory_database.Document) in_memory_database.DocumentCreateResult {
+func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, document in_memory_database.Document) (in_memory_database.DocumentCreateResult, error) {
 
 	var result = in_memory_database.DocumentCreateResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if document["docId"] == nil {
+		document["docId"] = utils.Generate16DigitUUID()
 	}
 
-	uniqueUuid := utils.Generate16DigitUUID()
+	var createEvent in_memory_database.Event = GenerateCreateEvent(document)
 
-	document["id"] = uniqueUuid
+	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, createEvent)
 
-	var createEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_CREATE,
-		EventData: document,
-	}
-
-	collection.EventChannel <- createEvent
 	result.Data = document
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentRead(gnoSQL *in_memory_database.GnoSQL,
-	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentReadResult {
+func DocumentRead(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, id string) (in_memory_database.DocumentReadResult, error) {
 
 	var result = in_memory_database.DocumentReadResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	existingDocument := collection.Read(id)
 
 	if existingDocument == nil {
-		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
-		return result
+		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	result.Data = existingDocument
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentFilter(gnoSQL *in_memory_database.GnoSQL,
-	DatabaseName string, CollectionName string, filter in_memory_database.MapInterface) in_memory_database.DocumentFilterResult {
+func DocumentFilter(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, filter in_memory_database.MapInterface) (in_memory_database.DocumentFilterResult, error) {
 
 	var result = in_memory_database.DocumentFilterResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	documents := collection.Filter(filter)
 
 	result.Data = documents
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
+func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 	DatabaseName string, CollectionName string, id string,
-	document in_memory_database.Document) in_memory_database.DocumentUpdateResult {
+	document in_memory_database.Document) (in_memory_database.DocumentUpdateResult, error) {
 
 	var result = in_memory_database.DocumentUpdateResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	existingDocument := collection.Read(id)
-
 	if existingDocument == nil {
-		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
-		return result
+		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	for key, value := range document {
 		existingDocument[key] = value
 	}
 
-	var updateEvent in_memory_database.Event = in_memory_database.Event{
-		Type:      utils.EVENT_UPDATE,
-		Id:        id,
-		EventData: existingDocument,
-	}
+	var updateEvent in_memory_database.Event = GenerateUpdateEvent(existingDocument)
 
-	collection.EventChannel <- updateEvent
+	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, updateEvent)
 
 	result.Data = existingDocument
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentDelete(gnoSQL *in_memory_database.GnoSQL,
-	DatabaseName string, CollectionName string, id string) in_memory_database.DocumentDeleteResult {
+func DocumentDelete(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string, id string) (in_memory_database.DocumentDeleteResult, error) {
 
 	var result = in_memory_database.DocumentDeleteResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	existingDocument := collection.Read(id)
 
 	if existingDocument == nil {
-		result.Error = utils.DOCUMENT_NOT_FOUND_MSG
-		return result
+		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
-	var deleteEvent in_memory_database.Event = in_memory_database.Event{
-		Type: utils.EVENT_DELETE,
-		Id:   id,
-	}
+	var deleteEvent in_memory_database.Event = GenerateDeleteEvent(id)
 
-	collection.EventChannel <- deleteEvent
+	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, deleteEvent)
 
 	result.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
 
-	return result
+	return result, nil
 }
 
-func ServiceDocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
-	DatabaseName string, CollectionName string) in_memory_database.DocumentGetAllResult {
+func DocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
+	DatabaseName string, CollectionName string) (in_memory_database.DocumentGetAllResult, error) {
 
 	var result = in_memory_database.DocumentGetAllResult{}
 
 	db, collection := gnoSQL.GetDatabaseAndCollection(DatabaseName, CollectionName)
 
-	if db == nil {
-		result.Error = utils.DATABASE_NOT_FOUND_MSG
-		return result
-	}
-
-	if collection == nil {
-		result.Error = utils.COLLECTION_NOT_FOUND_MSG
-		return result
+	if err := validateDatabaseAndCollection(db, collection); err != nil {
+		return result, err
 	}
 
 	documents := collection.GetAllData()
 
 	result.Data = documents
 
-	return result
+	return result, nil
+}
+
+// validateDatabase checks if db is nil, returns an error if it is
+func validateDatabase(db *in_memory_database.Database) error {
+	if db == nil {
+		return errors.New(utils.DATABASE_NOT_FOUND_MSG)
+	}
+	return nil
+}
+
+// validateCollection checks if collection is nil, returns an error if it is
+func validateCollection(collection *in_memory_database.Collection) error {
+	if collection == nil {
+		return errors.New(utils.COLLECTION_NOT_FOUND_MSG)
+	}
+	return nil
+}
+
+// validateDatabaseAndCollection checks if db or collection are nil, returns an error if either is nil
+func validateDatabaseAndCollection(db *in_memory_database.Database, collection *in_memory_database.Collection) error {
+	if err := validateDatabase(db); err != nil {
+		return err
+	}
+	return validateCollection(collection)
+}
+
+func GenerateCreateEvent(document in_memory_database.Document) in_memory_database.Event {
+	var EventDocument = make(in_memory_database.Document)
+
+	for key, value := range document {
+		EventDocument[key] = value
+	}
+
+	return in_memory_database.Event{
+		Type:      utils.EVENT_CREATE,
+		EventData: EventDocument,
+	}
+}
+
+func GenerateUpdateEvent(document in_memory_database.Document) in_memory_database.Event {
+	var EventDocument = make(in_memory_database.Document)
+	id := document["docId"]
+
+	for key, value := range document {
+		EventDocument[key] = value
+	}
+
+	return in_memory_database.Event{
+		Id:        id.(string),
+		Type:      utils.EVENT_UPDATE,
+		EventData: EventDocument,
+	}
+}
+
+func GenerateDeleteEvent(id string) in_memory_database.Event {
+	return in_memory_database.Event{
+		Id:   id,
+		Type: utils.EVENT_DELETE,
+	}
 }

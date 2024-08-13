@@ -51,15 +51,14 @@ func (gnoSQL *GnoSQL) LoadAllDBs() {
 	if err != nil {
 		fmt.Println("Error while reading database folders", fmt.Sprintf("%v", err))
 	}
-	fmt.Println("Database folders:", fmt.Sprintf("%v", databaseFolders))
 
+	fmt.Printf("\n Loading databases ")
 	// Read database and all colelctions one by one
 	for _, eachDatabaseFolder := range databaseFolders {
 		fileNames, err := utils.ReadFileNamesInDirectory(eachDatabaseFolder)
 		if err != nil {
 			fmt.Println("Error while reading collection files", fmt.Sprintf("%v", err))
 		}
-		fmt.Println("database & collections files:", fmt.Sprintf("%v", fileNames))
 
 		var db *Database
 		var collectionsGob []CollectionFileStruct
@@ -67,13 +66,11 @@ func (gnoSQL *GnoSQL) LoadAllDBs() {
 		// filter fileName "-db.gob", "-collection.gob"
 		for _, fileName := range fileNames {
 			if strings.Contains(fileName, utils.DBExtension) {
-				println("Loading database ", fileName)
 				if databaseGob, err := ReadDatabaseGobFile(fileName); err == nil {
 					db = gnoSQL.LoadDB(databaseGob)
 				}
 			}
 			if strings.Contains(fileName, utils.CollectionExtension) {
-				println("Loading collection ", fileName)
 				if collectionGob, err := ReadCollectionGobFile(fileName); err == nil {
 					collectionsGob = append(collectionsGob, collectionGob)
 				}
@@ -81,7 +78,11 @@ func (gnoSQL *GnoSQL) LoadAllDBs() {
 		}
 
 		db.Collections = db.LoadColls(collectionsGob)
+		fmt.Printf("\n\t Database Name : %v ", db.DatabaseName)
+		fmt.Printf("\n\t Collections Names : %v \n", db.GetCollectionNames())
+
 	}
+	fmt.Printf("\n ----- All databases loaded ----- \n")
 
 }
 

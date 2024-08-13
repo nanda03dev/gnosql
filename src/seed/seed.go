@@ -10,17 +10,17 @@ import (
 func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 	testDBName := "test"
 
-	UserCollection := in_memory_database.CollectionInput{
+	UserCollectionInput := in_memory_database.CollectionInput{
 		CollectionName: "users",
 		IndexKeys:      []string{"city", "pincode"},
 	}
 
-	OrderCollection := in_memory_database.CollectionInput{
+	OrderCollectionInput := in_memory_database.CollectionInput{
 		CollectionName: "orders",
 		IndexKeys:      []string{"userId", "category"},
 	}
 
-	collectionsInput := []in_memory_database.CollectionInput{UserCollection, OrderCollection}
+	collectionsInput := []in_memory_database.CollectionInput{UserCollectionInput, OrderCollectionInput}
 
 	if dbExists := gnoSQL.GetDB(testDBName); dbExists != nil {
 		fmt.Printf("\nSeed %s database already exists\n", testDBName)
@@ -66,24 +66,25 @@ func SeedData(gnoSQL *in_memory_database.GnoSQL) *in_memory_database.Database {
 		user["pwd"] = fmt.Sprintf("password%d", i+1)
 
 		var city City = cities[rand.Intn(len(cities))]
-		var cityDetails Pincode = city["pincodeDetails"].(Pincode)
+		var cityPincodeDetails Pincode = city["pincodeDetails"].(Pincode)
 
 		user["city"] = city["cityName"]
-		pincode := rand.Intn(cityDetails["pincodeEnd"]-cityDetails["pincodeStart"]+1) + cityDetails["pincodeStart"]
+		pincode := rand.Intn(cityPincodeDetails["pincodeEnd"]-cityPincodeDetails["pincodeStart"]+1) + cityPincodeDetails["pincodeStart"]
 
 		user["pincode"] = strconv.Itoa(pincode)
 
-		userInstance := db.GetColl(UserCollection.CollectionName)
-		userResult := userInstance.Create(user)
+		UserCollection := db.GetColl(UserCollectionInput.CollectionName)
+		newUser := UserCollection.Create(user)
 
-		userId := userResult["id"]
+		userId := newUser["docId"]
 
-		orderInstance := db.GetColl(OrderCollection.CollectionName)
+		OrderCollection := db.GetColl(OrderCollectionInput.CollectionName)
+
 		for i := 0; i < 2; i++ {
 			order := make(in_memory_database.Document)
 			order["userId"] = userId
 			order["category"] = category[rand.Intn(len(category))]
-			orderInstance.Create(order)
+			OrderCollection.Create(order)
 		}
 
 	}

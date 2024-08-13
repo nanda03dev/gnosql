@@ -6,6 +6,7 @@ import (
 	"gnosql/src/utils"
 	"os"
 	"slices"
+	"sort"
 	"sync"
 	"time"
 )
@@ -27,35 +28,40 @@ type Event struct {
 }
 
 type CollectionStats struct {
-	CollectionName string   `json:"CollectionName"`
+	CollectionName string   `json:"collectionName"`
 	IndexKeys      []string `json:"IndexKeys"`
 	Documents      int      `json:"Documents"`
 }
 
 const EventChannelSize = 1 * 10 * 100 * 1000
-const TimerToSaveToDisk = 1 * time.Minute
+
+// const TimerToSaveToDisk = 1 * time.Minute
+const TimerToSaveToDisk = 30 * time.Second
 
 type Collection struct {
 	CollectionName     string       `json:"CollectionName"`
+	ParentDBName       string       `json:"ParentDBName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
 	DocumentIds        DocumentIds  `json:"DocumentIds"`
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
-	EventChannel       chan Event
+	LastIndex          int          `json:"LastIndex"`
 	mu                 sync.RWMutex
 	IsChanged          bool
 }
 
 type CollectionFileStruct struct {
 	CollectionName     string       `json:"CollectionName"`
+	ParentDBName       string       `json:"ParentDBName"`
 	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
 	DocumentIds        DocumentIds  `json:"DocumentIds"`
 	CollectionFileName string       `json:"CollectionFileName"`
 	CollectionFullPath string       `json:"CollectionFullPath"`
+	LastIndex          int          `json:"LastIndex"`
 }
 
 type CollectionInput struct {
@@ -74,6 +80,7 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 	collection :=
 		&Collection{
 			CollectionName:     collectionInput.CollectionName,
+			ParentDBName:       db.DatabaseName,
 			IndexKeys:          collectionInput.IndexKeys,
 			DocumentsMap:       make(DocumentsMap),
 			DocumentIds:        make(DocumentIds, 0),
@@ -81,8 +88,8 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
 			mu:                 sync.RWMutex{},
-			EventChannel:       make(chan Event, EventChannelSize),
 			IsChanged:          false,
+			LastIndex:          0,
 		}
 
 	collection.SaveCollectionToFile()
@@ -97,13 +104,14 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 	for _, collectionGob := range collectionsGob {
 		collection := &Collection{
 			CollectionName:     collectionGob.CollectionName,
+			ParentDBName:       collectionGob.ParentDBName,
 			IndexKeys:          collectionGob.IndexKeys,
 			DocumentsMap:       collectionGob.DocumentsMap,
 			DocumentIds:        collectionGob.DocumentIds,
 			IndexMap:           collectionGob.IndexMap,
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
-			EventChannel:       make(chan Event, EventChannelSize),
+			LastIndex:          collectionGob.LastIndex,
 			mu:                 sync.RWMutex{},
 			IsChanged:          false,
 		}
@@ -119,17 +127,21 @@ func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
 	if !IsDbDeleted {
 		utils.DeleteFile(collection.CollectionFullPath)
 	}
-	collection.EventChannel <- Event{Type: utils.EVENT_STOP_GO_ROUTINE}
-	collection.Clear()
+	CollectionChannelInstance.AddCollectionEvent(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) Create(document Document) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
-	uniqueUuid := document["id"].(string)
+	if document["docId"] == nil {
+		document["docId"] = utils.Generate16DigitUUID()
+	}
 
-	document["created"] = utils.ExtractTimestampFromUUID(uniqueUuid).String()
+	var uniqueUuid = document["docId"].(string)
+	documentIndex := collection.LastIndex + 1
+	document["created"] = utils.UuidStringToTimeString(uniqueUuid)
+	document["docIndex"] = documentIndex
 
 	collection.DocumentsMap[uniqueUuid] = document
 
@@ -138,22 +150,33 @@ func (collection *Collection) Create(document Document) Document {
 	collection.createIndex(document)
 
 	collection.IsChanged = true
-
+	collection.LastIndex = documentIndex
 	return document
 }
 
 func (collection *Collection) Read(id string) Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	return collection.DocumentsMap[id]
 }
 
 func (collection *Collection) Filter(reqFilter MapInterface) []Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	filters := make([]MapInterface, 0)
+	var limit int = 1000
 
 	for key, value := range reqFilter {
 		temp := make(MapInterface)
-		temp["key"] = key
-		temp["value"] = value
-		filters = append(filters, temp)
+		if key != "limit" {
+			temp["key"] = key
+			temp["value"] = value
+			filters = append(filters, temp)
+		} else {
+			limit = value.(int)
+		}
 	}
 
 	filtersWithoutIndex := make([]MapInterface, 0)
@@ -179,9 +202,9 @@ outerLoop:
 		filteredIds = collection.DocumentIds
 	}
 
-	fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
-	fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
-	fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
+	// fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
+	// fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
+	// fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
 
 	filteredIdsLength := len(filteredIds)
 
@@ -219,8 +242,21 @@ outerLoop:
 		results = append(results, result)
 	}
 
-	return results
+	sortDocuments(results)
 
+	var limitedResult = make([]Document, 0)
+
+	var lengthOfResult = len(results)
+
+	if len(results) < limit {
+		limit = lengthOfResult
+	}
+
+	for i := 0; i < limit; i++ {
+		limitedResult = append(limitedResult, results[i])
+	}
+
+	return limitedResult
 }
 
 func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds, start int, end int) {
@@ -247,7 +283,6 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 }
 
 func (collection *Collection) filterWithIndex(filters []MapInterface) DocumentIds {
-
 	filteredIndexMap := make(IndexMap)
 
 	for _, filter := range filters {
@@ -317,9 +352,8 @@ outerLoop:
 }
 
 func (collection *Collection) Update(id string, updatedDocument Document) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 	if _, exists := collection.DocumentsMap[id]; !exists {
 		return nil
 	}
@@ -333,15 +367,15 @@ func (collection *Collection) Update(id string, updatedDocument Document) Docume
 }
 
 func (collection *Collection) Delete(id string) error {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
 	if document, exists := collection.DocumentsMap[id]; exists {
 		delete(collection.DocumentsMap, id)
 
 		collection.deleteIndex(document)
 	} else {
-		return fmt.Errorf("id '%s' not found", id)
+		return fmt.Errorf("docId '%s' not found in the collection", id)
 	}
 
 	collection.IsChanged = true
@@ -349,10 +383,16 @@ func (collection *Collection) Delete(id string) error {
 }
 
 func (collection *Collection) GetIds() []string {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	return collection.DocumentIds
 }
 
 func (collection *Collection) GetAllData() []Document {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	documents := make([]Document, 0, len(collection.DocumentsMap))
 
 	for _, document := range collection.DocumentsMap {
@@ -371,6 +411,9 @@ func (collection *Collection) Clear() {
 }
 
 func (collection *Collection) Stats() CollectionStats {
+	collection.mu.RLock()
+	defer collection.mu.RUnlock()
+
 	var statsMap = CollectionStats{
 		CollectionName: collection.CollectionName,
 		IndexKeys:      collection.IndexKeys,
@@ -382,7 +425,7 @@ func (collection *Collection) Stats() CollectionStats {
 func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["id"]; ok {
+			if id, ok := document["docId"]; ok {
 				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
 			}
 		}
@@ -393,7 +436,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 	for _, eachIndex := range collection.IndexKeys {
 		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
 			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
-				var id string = oldDocument["id"].(string)
+				var id string = oldDocument["docId"].(string)
 				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
 				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
 
@@ -405,7 +448,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
 		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["id"]; ok {
+			if id, ok := document["docId"]; ok {
 				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
 			}
 		}
@@ -440,17 +483,35 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 }
 
 func (collection *Collection) SaveCollectionToFile() {
-	fmt.Printf("\n Writing to collection : %s to disk \n", collection.CollectionName)
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
+
+	if !collection.IsChanged {
+		return
+	}
 
 	temp := CollectionFileStruct{
 		CollectionName:     collection.CollectionName,
+		ParentDBName:       collection.ParentDBName,
 		IndexKeys:          collection.IndexKeys,
 		DocumentsMap:       collection.DocumentsMap,
 		DocumentIds:        collection.DocumentIds,
 		IndexMap:           collection.IndexMap,
 		CollectionFileName: collection.CollectionFileName,
 		CollectionFullPath: collection.CollectionFullPath,
+		LastIndex:          collection.LastIndex,
 	}
+	collection.IsChanged = false
+
+	writeCollectionTofileBackground(temp)
+}
+
+func writeCollectionTofileBackground(temp CollectionFileStruct) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Worker panic recovered: %v. \n", r)
+		}
+	}()
 
 	gobData, err := utils.EncodeGob(temp)
 
@@ -458,15 +519,13 @@ func (collection *Collection) SaveCollectionToFile() {
 		fmt.Println("GOB encoding error:", err)
 	}
 
-	err = utils.SaveToFile(collection.CollectionFullPath, gobData)
+	err = utils.SaveToFile(temp.CollectionFullPath, gobData)
 
 	if err != nil {
 		fmt.Println("Error saving collection GOB to file:", err)
 	}
 
-	fmt.Println("GOB data saved to ", collection.CollectionName)
-
-	collection.IsChanged = false
+	fmt.Printf("\n EVENT_SAVE_TO_DISK : GOB data saved to %v \n", temp.CollectionName)
 }
 
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
@@ -497,14 +556,14 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	fileData, err := os.ReadFile(filePath)
 
 	if err != nil {
-		fmt.Printf("\n Datebase file %s reading, Error %v", filePath, err)
+		fmt.Printf("\n Collection file %s reading, Error %v", filePath, err)
 		return gobData, err
 	}
 
 	err = utils.DecodeGob(fileData, &gobData)
 
 	if err != nil {
-		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)
+		fmt.Printf("\n Collection file %s decoding , Error %v", filePath, err)
 
 		return gobData, err
 	}
@@ -512,19 +571,16 @@ func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
 	return gobData, nil
 }
 
-func (collection *Collection) StartTimerToSaveFile() {
-	for range time.Tick(TimerToSaveToDisk) {
-		collection.EventChannel <- Event{Type: utils.EVENT_SAVE_TO_DISK}
-	}
-}
-
 func (collection *Collection) StartInternalFunctions() {
-	go collection.StartTimerToSaveFile()
 	go collection.EventListener()
 }
 
 func (collection *Collection) EventListener() {
-	for event := range collection.EventChannel {
+	var collectionChannelName = collection.ParentDBName + collection.CollectionName
+	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.ParentDBName, collection.CollectionName)
+	for {
+
+		event := <-collectionChannel
 
 		if event.Type == utils.EVENT_CREATE {
 			collection.Create(event.EventData)
@@ -536,11 +592,8 @@ func (collection *Collection) EventListener() {
 			collection.Delete(event.Id)
 		}
 		if event.Type == utils.EVENT_SAVE_TO_DISK {
-			if collection.IsChanged {
-				collection.SaveCollectionToFile()
-			} else {
-				println("No changes occured in collection : ", collection.CollectionName)
-			}
+			collection.SaveCollectionToFile()
+			fmt.Printf("\n EVENT_SAVE_TO_DISK : %v done\n", collectionChannelName)
 		}
 		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
 			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
@@ -548,4 +601,20 @@ func (collection *Collection) EventListener() {
 		}
 
 	}
+}
+
+type SortByDocIndex []Document
+
+func (a SortByDocIndex) Len() int      { return len(a) }
+func (a SortByDocIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a SortByDocIndex) Less(i, j int) bool {
+
+	iDocIndex := a[i]["docIndex"].(int)
+	jDocIndex := a[j]["docIndex"].(int)
+
+	return iDocIndex < jDocIndex
+}
+
+func sortDocuments(documents []Document) {
+	sort.Sort(SortByDocIndex(documents))
 }
