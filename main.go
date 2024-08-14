@@ -36,9 +36,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
+var (
 	// Port for gRPC server to listen to
-	PORT = ":5455"
+	GRPC_PORT = "5455"
+	GIN_PORT  = "5454"
 )
 
 // @BasePath /api/v1
@@ -46,11 +47,15 @@ func main() {
 	ginRouter := gin.Default()
 	ginRouter.SetHTMLTemplate(template.Must(template.ParseGlob("./src/templates/*")))
 
-	port := os.Getenv("PORT")
-
-	if port == "" {
-		port = "5454"
+	if port := os.Getenv("GIN_PORT"); port != "" {
+		GIN_PORT = port
 	}
+	if port := os.Getenv("GRPC_PORT"); port != "" {
+		GRPC_PORT = port
+	}
+
+	fmt.Printf("\n GIN_PORT: %v", GIN_PORT)
+	fmt.Printf("\n GRPC_PORT: %v", GRPC_PORT)
 
 	utils.CreateDatabaseFolder()
 	var gnoSQL *in_memory_database.GnoSQL = in_memory_database.CreateGnoSQL()
@@ -59,20 +64,20 @@ func main() {
 	router.RouterInit(ginRouter, gnoSQL)
 
 	docs.SwaggerInfo.BasePath = "/"
-	docs.SwaggerInfo.Host = "localhost:5454"
+	docs.SwaggerInfo.Host = "localhost:" + GIN_PORT
 
 	// Swagger handler
 	ginRouter.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Start the server in a separate goroutine
 	go func() {
-		if err := ginRouter.Run(":" + port); err != nil {
+		if err := ginRouter.Run(":" + GIN_PORT); err != nil {
 			fmt.Printf("Error starting server: %v\n", err)
 		}
 	}()
 
 	go func() {
-		lis, err := net.Listen("tcp", PORT)
+		lis, err := net.Listen("tcp", ":"+GRPC_PORT)
 
 		if err != nil {
 			log.Fatalf("failed connection: %v", err)

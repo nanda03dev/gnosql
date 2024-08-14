@@ -8,13 +8,13 @@ services:
             dockerfile: Dockerfile.local
         ports:
             # <<local host port >>:<<container port>>
-            - 5454:3000
+            - 5454:5454
             - 5455:5455
         volumes:
-            - .:/app
             - gnosqldb-data-local:/root/gnosql/db/
         environment:
-            PORT: 3000
+            GIN_PORT: 5454
+            GRPC_PORT: 5455
             GIN_MODE: debug
 volumes:
     gnosqldb-data-local:

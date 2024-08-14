@@ -10,12 +10,11 @@ COPY go.mod go.sum ./
 # Download the Go module dependencies
 RUN go mod download
 
-RUN go install github.com/codegangsta/gin@latest
-
 # Copy the rest of the application files
 COPY . .
-# Set the default entry point and arguments
-ENTRYPOINT ["gin", "run", "-i"]
 
-# CMD can be used to provide default arguments that can be overridden when running the container
-CMD ["main.go"]
+# Build the Go server
+RUN go build -o gnosql .
+
+# Set the command to run the server when the container starts
+CMD ["./gnosql"]

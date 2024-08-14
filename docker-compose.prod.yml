@@ -9,10 +9,12 @@ services:
         ports:
             # <<local host port >>:<<container port>>
             - 5454:5454
+            - 5455:5455
         volumes:
             - gnosqldb-data:/root/gnosql/db/
         environment:
-            PORT: 5454
+            GIN_PORT: 5454
+            GRPC_PORT: 5455
             GIN_MODE: release
 volumes:
     gnosqldb-data:
