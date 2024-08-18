@@ -128,8 +128,12 @@
                 <input type="text" id="collectionName" name="collectionName">
             </div>
             <div>
-                <label for="documentId"><i class="fas fa-box icon"></i>Document ID:</label>
-                <input type="text" id="documentId" name="documentId">
+                <label for="filterKey"><i class="fas fa-box icon"></i>Filter Key:</label>
+                <input type="text" id="filterKey" name="filterKey"value="docId">
+            </div>
+            <div>
+                <label for="filterValue"><i class="fas fa-box icon"></i>Filter Value:</label>
+                <input type="text" id="filterValue" name="filterValue">
             </div>
             <div id="IdError" class="error"></div>
             <button type="submit"><i class="fas fa-search icon"></i>Fetch</button>
@@ -144,15 +148,16 @@
     <script>
         document.getElementById('data-form').addEventListener('submit', function (event) {
             const collectionName = document.getElementById('collectionName').value;
-            const documentId = document.getElementById('documentId').value;
+            // const documentId = document.getElementById('documentId').value;
             const errorDiv = document.getElementById('IdError');
 
             if (collectionName && collectionName.length < 2) {
                 errorDiv.textContent = 'Invalid collectionName. It must greater than 2 characters';
                 event.preventDefault(); // Prevent form submission
-            } else if (documentId && documentId.length !== 36) {
-                errorDiv.textContent = 'Invalid Document ID. It must be 36 characters long.';
-                event.preventDefault(); // Prevent form submission
+                // } else if (documentId && documentId.length !== 36) {
+                //     errorDiv.textContent = 'Invalid Document ID. It must be 36 characters long.';
+                //     event.preventDefault(); // Prevent form submission
+                // }
             } else {
                 errorDiv.textContent = ''; // Clear error message if valid
             }

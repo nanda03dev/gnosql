@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -127,7 +128,7 @@ func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
 	if !IsDbDeleted {
 		utils.DeleteFile(collection.CollectionFullPath)
 	}
-	CollectionChannelInstance.AddCollectionEvent(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
+	AddIncomingRequest(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) Create(document Document) Document {
@@ -162,6 +163,8 @@ func (collection *Collection) Read(id string) Document {
 }
 
 func (collection *Collection) Filter(reqFilter MapInterface) []Document {
+	fmt.Printf("\n reqFilter %+v \n", reqFilter)
+
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
@@ -178,6 +181,7 @@ func (collection *Collection) Filter(reqFilter MapInterface) []Document {
 			limit = value.(int)
 		}
 	}
+	fmt.Printf("\n filters %+v \n", filters)
 
 	filtersWithoutIndex := make([]MapInterface, 0)
 	filtersWithIndex := make([]MapInterface, 0)
@@ -268,10 +272,31 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 		document := collection.DocumentsMap[id]
 
 		for _, filter := range filter {
+
 			if value, ok := document[filter["key"].(string)]; ok {
-				if value != filter["value"].(string) {
+				filterValue := filter["value"].(string)
+				switch v := value.(type) {
+				case int:
+					// Convert filterValue to int for comparison
+					if filterInt, err := strconv.Atoi(filterValue); err == nil {
+						if v != filterInt {
+							isMatch = false
+							break
+						}
+					} else {
+						// Handle conversion error or invalid filter value
+						isMatch = false
+						break
+					}
+				case string:
+					// Direct string comparison
+					if v != filterValue {
+						isMatch = false
+						break
+					}
+				default:
+					// Handle other types or unsupported types
 					isMatch = false
-					break
 				}
 			}
 		}

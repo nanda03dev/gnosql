@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
 	"gnosql/src/utils"
@@ -250,7 +251,7 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	}
 
 	result, err := service.DocumentFilter(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName, requestBody.Filter)
-
+	fmt.Printf("\n result %v \n err %v", result, err)
 	c.JSON(GetResponse(result, err))
 }
 
@@ -324,7 +325,7 @@ func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 func GetResponse(result interface{}, err error) (int, interface{}) {
-	if err != nil {
+	if err == nil {
 		return http.StatusOK, result
 	} else {
 		return http.StatusBadRequest, err

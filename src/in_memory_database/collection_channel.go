@@ -3,9 +3,14 @@ package in_memory_database
 import (
 	"fmt"
 	"gnosql/src/utils"
+	"strings"
 	"sync"
 	"time"
 )
+
+var ChannelNameDivider = "-&-"
+
+var CollectionChannelLimit = 10000
 
 type ChannelMap map[string]chan Event
 
@@ -43,17 +48,9 @@ func (cc *CollectionChannel) GetCollectionChannelWithLock(databaseName string, c
 	return GetCollectionChannel(databaseName, collectionName)
 }
 
-func (cc *CollectionChannel) AddCollectionEventByChannelName(channelName string, event Event) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-
-	var channel = CollectionChannelInstance.channels[channelName]
-	channel <- event
-}
-
 func (cc *CollectionChannel) GetAllCollections() []string {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
+	cc.mu.RLock()
+	defer cc.mu.RUnlock()
 	var channelNames []string
 
 	for channelName := range cc.channels {
@@ -68,7 +65,8 @@ func (cc *CollectionChannel) StartTimerToSaveFile() {
 		fmt.Printf("\n ---------------------------------------------------------------- \n")
 		fmt.Printf("\n Ticker started. getting all channels\n")
 		for _, channelName := range cc.GetAllCollections() {
-			cc.AddCollectionEventByChannelName(channelName, Event{Type: utils.EVENT_SAVE_TO_DISK})
+			var databaseName, CollectionName = ExtractDatabaseAndCollectionName(channelName)
+			AddIncomingRequest(databaseName, CollectionName, Event{Type: utils.EVENT_SAVE_TO_DISK})
 		}
 		fmt.Printf("\n EVENT_SAVE_TO_DISK event sent to all colelction channels \n")
 		fmt.Printf("\n ---------------------------------------------------------------- \n")
@@ -77,10 +75,10 @@ func (cc *CollectionChannel) StartTimerToSaveFile() {
 }
 
 func GetCollectionChannel(databaseName string, collectionName string) chan Event {
-	var channelName = databaseName + collectionName
+	var channelName = ToCollectionChannelName(databaseName, collectionName)
 
 	if _, isExists := CollectionChannelInstance.channels[channelName]; !isExists {
-		CollectionChannelInstance.channels[channelName] = make(chan Event, 10000)
+		CollectionChannelInstance.channels[channelName] = make(chan Event, CollectionChannelLimit)
 	}
 
 	var channel = CollectionChannelInstance.channels[channelName]
@@ -88,10 +86,17 @@ func GetCollectionChannel(databaseName string, collectionName string) chan Event
 	return channel
 }
 
-func DeleteCollectionChannel(databaseName string, collectionName string) {
-	var channelName = databaseName + collectionName
+func ToCollectionChannelName(databaseName string, collectionName string) string {
+	return databaseName + ChannelNameDivider + collectionName
+}
 
-	if _, isExists := CollectionChannelInstance.channels[channelName]; isExists {
-		delete(CollectionChannelInstance.channels, channelName)
-	}
+func ExtractDatabaseAndCollectionName(channelName string) (string, string) {
+	var result = strings.Split(channelName, ChannelNameDivider)
+	return result[0], result[1]
+}
+
+func DeleteCollectionChannel(databaseName string, collectionName string) {
+	var channelName = ToCollectionChannelName(databaseName, collectionName)
+
+	delete(CollectionChannelInstance.channels, channelName)
 }

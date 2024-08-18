@@ -6,6 +6,7 @@ import (
 	"gnosql/src/in_memory_database"
 	"gnosql/src/seed"
 	"gnosql/src/service"
+
 	// "html/template"
 	"net/http"
 
@@ -15,7 +16,8 @@ import (
 type FilterQuery struct {
 	DatabaseName   string `form:"databaseName"`
 	CollectionName string `form:"collectionName"`
-	DocumentId     string `form:"documentId"`
+	FilterKey      string `form:"filterKey"`
+	FilterValue    string `form:"filterValue"`
 }
 
 func RouterInit(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
@@ -41,9 +43,9 @@ func UIRoutes(ginRouter *gin.Engine, gnoSQL *in_memory_database.GnoSQL) {
 
 		var filter in_memory_database.MapInterface
 
-		if len(filterQuery.DocumentId) > 10 {
+		if len(filterQuery.FilterValue) > 0 {
 			filter = in_memory_database.MapInterface{
-				"docId": filterQuery.DocumentId,
+				filterQuery.FilterKey: filterQuery.FilterValue,
 			}
 		}
 

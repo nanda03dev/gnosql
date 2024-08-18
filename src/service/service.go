@@ -166,7 +166,7 @@ func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 
 	var createEvent in_memory_database.Event = GenerateCreateEvent(document)
 
-	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, createEvent)
+	go in_memory_database.AddIncomingRequest(db.DatabaseName, collection.CollectionName, createEvent)
 
 	result.Data = document
 
@@ -236,7 +236,7 @@ func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 
 	var updateEvent in_memory_database.Event = GenerateUpdateEvent(existingDocument)
 
-	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, updateEvent)
+	go in_memory_database.AddIncomingRequest(db.DatabaseName, collection.CollectionName, updateEvent)
 
 	result.Data = existingDocument
 
@@ -262,7 +262,7 @@ func DocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 
 	var deleteEvent in_memory_database.Event = GenerateDeleteEvent(id)
 
-	go in_memory_database.CollectionChannelInstance.AddCollectionEvent(db.DatabaseName, collection.CollectionName, deleteEvent)
+	go in_memory_database.AddIncomingRequest(db.DatabaseName, collection.CollectionName, deleteEvent)
 
 	result.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
 
