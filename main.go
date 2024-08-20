@@ -87,7 +87,7 @@ func main() {
 
 		pb.RegisterGnoSQLServiceServer(s, &grpc_handler.GnoSQLServer{GnoSQL: gnoSQL})
 
-		log.Printf("server listening at %v", lis.Addr())
+		log.Printf("\n server listening at %v", lis.Addr())
 
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to server: %v", err)

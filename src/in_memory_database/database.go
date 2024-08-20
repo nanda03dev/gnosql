@@ -78,7 +78,7 @@ func (db *Database) CreateColls(collectionsInput []CollectionInput) []*Collectio
 			collections = append(collections, collection)
 		}
 	}
-
+	fmt.Printf("\n collections %v ", collections)
 	return collections
 }
 

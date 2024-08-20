@@ -13,6 +13,8 @@ var GNOSQLFULLPATH = filepath.Join(usr.HomeDir, GNOSQPATH)
 
 var DBExtension = "-db.gob"
 var CollectionExtension = "-collection.gob"
+var CollectionDataExtension = "-data.gob"
+var MaximumLengthNoOfDocuments = 10
 
 var EVENT_CREATE = "EVENT_CREATE"
 var EVENT_UPDATE = "EVENT_UPDATE"

@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -153,8 +154,14 @@ func GetCollectionFileName(collectionName string) string {
 	return collectionName + CollectionExtension
 }
 
-func GetCollectionFilePath(databaseName string, fileName string) string {
-	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
+func GetCollectionDataFileName() string {
+	return Generate16DigitUUID() + CollectionDataExtension
+}
+func GetCollectionFolderPath(databaseName string, collectionName string) string {
+	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+collectionName)
+}
+func GetCollectionFilePath(databaseName string, collectionName string, fileName string) string {
+	return GetCollectionFolderPath(databaseName, collectionName) + "/" + fileName
 }
 
 func DeleteFile(filePath string) bool {
@@ -181,6 +188,12 @@ func DecodeGob(data []byte, target interface{}) error {
 }
 
 func SaveToFile(filename string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+		fmt.Printf("\n err %v ", err)
+
+		return err
+	}
+
 	return os.WriteFile(filename, data, 0644)
 }
 
