@@ -145,7 +145,6 @@ func GetDatabaseFileName(databaseName string) string {
 func GetDatabaseFolderPath(databaseName string) string {
 	return filepath.Join(GNOSQLFULLPATH, databaseName)
 }
-
 func GetDatabaseFilePath(databaseName, fileName string) string {
 	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
 }
@@ -168,6 +167,15 @@ func DeleteFile(filePath string) bool {
 	err := os.Remove(filePath)
 	if err != nil {
 		println("Error deleting file:", err)
+		return false
+	}
+
+	return true
+}
+func DeleteFolder(filePath string) bool {
+	err := os.RemoveAll(filePath)
+	if err != nil {
+		fmt.Println("Error deleting file or directory:", err)
 		return false
 	}
 
