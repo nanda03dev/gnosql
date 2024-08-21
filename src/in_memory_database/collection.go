@@ -49,7 +49,6 @@ type Collection struct {
 	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
-	DocumentIds        DocumentIds       `json:"DocumentIds"`
 	CollectionFileName string            `json:"CollectionFileName"`
 	CollectionFullPath string            `json:"CollectionFullPath"`
 	LastIndex          int               `json:"LastIndex"`
@@ -66,7 +65,6 @@ type CollectionFileStruct struct {
 	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
 	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
 	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
-	DocumentIds        DocumentIds       `json:"DocumentIds"`
 	CollectionFileName string            `json:"CollectionFileName"`
 	CollectionFullPath string            `json:"CollectionFullPath"`
 	LastIndex          int               `json:"LastIndex"`
@@ -95,7 +93,6 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 			ParentDBName:       db.DatabaseName,
 			IndexKeys:          collectionInput.IndexKeys,
 			DocumentsMap:       make(DocumentsMap),
-			DocumentIds:        make(DocumentIds, 0),
 			IndexMap:           make(IndexMap),
 			CollectionFileName: fileName,
 			CollectionFullPath: fullPath,
@@ -122,7 +119,6 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			ParentDBName:       collectionGob.ParentDBName,
 			IndexKeys:          collectionGob.IndexKeys,
 			DocumentsMap:       collectionGob.DocumentsMap,
-			DocumentIds:        collectionGob.DocumentIds,
 			IndexMap:           collectionGob.IndexMap,
 			CollectionFileName: collectionGob.CollectionFileName,
 			CollectionFullPath: collectionGob.CollectionFullPath,
@@ -175,8 +171,6 @@ func (collection *Collection) Create(document Document) Document {
 	}
 
 	collection.DocumentsMap[batchId][uniqueUuid] = document
-
-	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
 
 	collection.createIndex(document)
 
@@ -491,13 +485,6 @@ func (collection *Collection) isDocumentExists(id string) (bool, string, Documen
 	return true, batchId, document
 }
 
-func (collection *Collection) GetIds() []string {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
-	return collection.DocumentIds
-}
-
 func (collection *Collection) GetAllData() []Document {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
@@ -605,7 +592,6 @@ func (collection *Collection) SaveCollectionToFile() {
 		CollectionName:     collection.CollectionName,
 		ParentDBName:       collection.ParentDBName,
 		IndexKeys:          collection.IndexKeys,
-		DocumentIds:        collection.DocumentIds,
 		IndexMap:           collection.IndexMap,
 		CollectionFileName: collection.CollectionFileName,
 		CollectionFullPath: collection.CollectionFullPath,
