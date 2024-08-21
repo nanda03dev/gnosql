@@ -40,33 +40,29 @@ const EventChannelSize = 1 * 10 * 100 * 1000
 const TimerToSaveToDisk = 30 * time.Second
 
 type Collection struct {
-	CollectionName     string            `json:"CollectionName"`
-	ParentDBName       string            `json:"ParentDBName"`
-	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
-	CollectionFileName string            `json:"CollectionFileName"`
-	CollectionFullPath string            `json:"CollectionFullPath"`
-	LastIndex          int               `json:"LastIndex"`
-	CurrentBatchId     string            `json:"CurrentBatchId"`
-	CurrentBatchCount  int               `json:"CurrentBatchCount"`
-	BatchUpdateStatus  BatchUpdateStatus `json:"BatchUpdateStatus"`
-	mu                 sync.RWMutex
-	IsChanged          bool
+	CollectionName    string            `json:"CollectionName"`
+	DatabaseName      string            `json:"DatabaseName"`
+	IndexMap          IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys         []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap      DocumentsMap      `json:"DocumentsMap"`
+	LastIndex         int               `json:"LastIndex"`
+	CurrentBatchId    string            `json:"CurrentBatchId"`
+	CurrentBatchCount int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus BatchUpdateStatus `json:"BatchUpdateStatus"`
+	IsChanged         bool
+	mu                sync.RWMutex
 }
 
 type CollectionFileStruct struct {
-	CollectionName     string            `json:"CollectionName"`
-	ParentDBName       string            `json:"ParentDBName"`
-	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
-	CollectionFileName string            `json:"CollectionFileName"`
-	CollectionFullPath string            `json:"CollectionFullPath"`
-	LastIndex          int               `json:"LastIndex"`
-	CurrentBatchId     string            `json:"CurrentBatchId"`
-	CurrentBatchCount  int               `json:"CurrentBatchCount"`
-	BatchUpdateStatus  BatchUpdateStatus `json:"BatchUpdateStatus"`
+	CollectionName    string            `json:"CollectionName"`
+	DatabaseName      string            `json:"DatabaseName"`
+	IndexMap          IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys         []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap      DocumentsMap      `json:"DocumentsMap"`
+	LastIndex         int               `json:"LastIndex"`
+	CurrentBatchId    string            `json:"CurrentBatchId"`
+	CurrentBatchCount int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus BatchUpdateStatus `json:"BatchUpdateStatus"`
 }
 
 type CollectionInput struct {
@@ -78,26 +74,21 @@ type CollectionInput struct {
 }
 
 func CreateCollection(collectionInput CollectionInput, db *Database) *Collection {
-
-	fileName := utils.GetCollectionFileName(collectionInput.CollectionName)
-	fullPath := utils.GetCollectionFilePath(db.DatabaseName, collectionInput.CollectionName, fileName)
 	currentBatchId := utils.GetCollectionBatchIdFileName()
 
 	collection :=
 		&Collection{
-			CollectionName:     collectionInput.CollectionName,
-			ParentDBName:       db.DatabaseName,
-			IndexKeys:          collectionInput.IndexKeys,
-			DocumentsMap:       make(DocumentsMap),
-			IndexMap:           make(IndexMap),
-			CollectionFileName: fileName,
-			CollectionFullPath: fullPath,
-			mu:                 sync.RWMutex{},
-			IsChanged:          true,
-			LastIndex:          0,
-			CurrentBatchId:     currentBatchId,
-			BatchUpdateStatus:  BatchUpdateStatus{currentBatchId: true},
-			CurrentBatchCount:  0,
+			CollectionName:    collectionInput.CollectionName,
+			DatabaseName:      db.DatabaseName,
+			IndexKeys:         collectionInput.IndexKeys,
+			DocumentsMap:      make(DocumentsMap),
+			IndexMap:          make(IndexMap),
+			IsChanged:         true,
+			LastIndex:         0,
+			CurrentBatchId:    currentBatchId,
+			BatchUpdateStatus: BatchUpdateStatus{currentBatchId: true},
+			CurrentBatchCount: 0,
+			mu:                sync.RWMutex{},
 		}
 
 	collection.SaveCollectionToFile()
@@ -111,23 +102,20 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 
 	for _, collectionGob := range collectionsGob {
 		collection := &Collection{
-			CollectionName:     collectionGob.CollectionName,
-			ParentDBName:       collectionGob.ParentDBName,
-			IndexKeys:          collectionGob.IndexKeys,
-			DocumentsMap:       collectionGob.DocumentsMap,
-			IndexMap:           collectionGob.IndexMap,
-			CollectionFileName: collectionGob.CollectionFileName,
-			CollectionFullPath: collectionGob.CollectionFullPath,
-			LastIndex:          collectionGob.LastIndex,
-			CurrentBatchId:     collectionGob.CurrentBatchId,
-			CurrentBatchCount:  collectionGob.CurrentBatchCount,
-			BatchUpdateStatus:  collectionGob.BatchUpdateStatus,
-			mu:                 sync.RWMutex{},
-			IsChanged:          false,
+			CollectionName:    collectionGob.CollectionName,
+			DatabaseName:      collectionGob.DatabaseName,
+			IndexKeys:         collectionGob.IndexKeys,
+			DocumentsMap:      collectionGob.DocumentsMap,
+			IndexMap:          collectionGob.IndexMap,
+			LastIndex:         collectionGob.LastIndex,
+			CurrentBatchId:    collectionGob.CurrentBatchId,
+			CurrentBatchCount: collectionGob.CurrentBatchCount,
+			BatchUpdateStatus: collectionGob.BatchUpdateStatus,
+			IsChanged:         false,
+			mu:                sync.RWMutex{},
 		}
 
 		collection.StartInternalFunctions()
-
 		collections = append(collections, collection)
 	}
 	return collections
@@ -135,9 +123,9 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 
 func (collection *Collection) DeleteCollection(ToBeDeleted bool) {
 	if ToBeDeleted {
-		utils.DeleteFolder(utils.GetCollectionFolderPath(collection.ParentDBName, collection.CollectionName))
+		utils.DeleteFolder(utils.GetCollectionFolderPath(collection.DatabaseName, collection.CollectionName))
 	}
-	AddIncomingRequest(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
+	AddIncomingRequest(collection.DatabaseName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) GetAllData() []Document {
@@ -156,11 +144,19 @@ func (collection *Collection) GetAllData() []Document {
 }
 
 func (collection *Collection) Clear() {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-	collection.DocumentsMap = make(DocumentsMap)
-	collection.IndexMap = make(IndexMap)
-	collection.IsChanged = true
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
+
+	collection.CollectionName = ""
+	collection.DatabaseName = ""
+	collection.IndexMap = make(IndexMap)         // Reset to an empty map
+	collection.IndexKeys = nil                   // Reset to nil (or make([]string, 0) for an empty slice)
+	collection.DocumentsMap = make(DocumentsMap) // Reset to an empty map
+	collection.LastIndex = 0
+	collection.CurrentBatchId = ""
+	collection.CurrentBatchCount = 0
+	collection.BatchUpdateStatus = make(BatchUpdateStatus) // Reset to an empty map
+	collection.IsChanged = false
 }
 
 func (collection *Collection) Stats() CollectionStats {
@@ -244,16 +240,14 @@ func (collection *Collection) SaveCollectionToFile() {
 	}
 
 	temp := CollectionFileStruct{
-		CollectionName:     collection.CollectionName,
-		ParentDBName:       collection.ParentDBName,
-		IndexKeys:          collection.IndexKeys,
-		IndexMap:           collection.IndexMap,
-		CollectionFileName: collection.CollectionFileName,
-		CollectionFullPath: collection.CollectionFullPath,
-		LastIndex:          collection.LastIndex,
-		CurrentBatchId:     collection.CurrentBatchId,
-		CurrentBatchCount:  collection.CurrentBatchCount,
-		BatchUpdateStatus:  collection.BatchUpdateStatus,
+		CollectionName:    collection.CollectionName,
+		DatabaseName:      collection.DatabaseName,
+		IndexKeys:         collection.IndexKeys,
+		IndexMap:          collection.IndexMap,
+		LastIndex:         collection.LastIndex,
+		CurrentBatchId:    collection.CurrentBatchId,
+		CurrentBatchCount: collection.CurrentBatchCount,
+		BatchUpdateStatus: collection.BatchUpdateStatus,
 	}
 
 	collection.IsChanged = false
@@ -263,7 +257,7 @@ func (collection *Collection) SaveCollectionToFile() {
 			gobData, err := utils.EncodeGob(documents)
 
 			if err == nil {
-				go writeGobDataToDisk(utils.GetCollectionFilePath(collection.ParentDBName, collection.CollectionName, fileName), gobData)
+				go writeGobDataToDisk(utils.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, fileName), gobData)
 			} else {
 				fmt.Printf("\n collection: %v \t batch filename: %v \t GOB encoding error: %v ", collection.CollectionName, fileName, err)
 			}
@@ -275,7 +269,7 @@ func (collection *Collection) SaveCollectionToFile() {
 
 	collectionGobData, err := utils.EncodeGob(temp)
 	if err == nil {
-		go writeGobDataToDisk(utils.GetCollectionFilePath(collection.ParentDBName, collection.CollectionName, collection.CollectionFileName), collectionGobData)
+		go writeGobDataToDisk(utils.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, utils.GetCollectionFileName(collection.CollectionName)), collectionGobData)
 	} else {
 		fmt.Printf("\n collection: %v \t GOB encoding error: %v ", collection.CollectionName, err)
 	}
@@ -337,8 +331,8 @@ func (collection *Collection) StartInternalFunctions() {
 }
 
 func (collection *Collection) EventListener() {
-	var collectionChannelName = collection.ParentDBName + collection.CollectionName
-	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.ParentDBName, collection.CollectionName)
+	var collectionChannelName = collection.DatabaseName + collection.CollectionName
+	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.DatabaseName, collection.CollectionName)
 	for {
 
 		event := <-collectionChannel
@@ -357,6 +351,7 @@ func (collection *Collection) EventListener() {
 			fmt.Printf("\n EVENT_SAVE_TO_DISK : %v done\n", collectionChannelName)
 		}
 		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
+			collection.Clear()
 			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
 			return
 		}

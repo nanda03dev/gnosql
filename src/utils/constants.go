@@ -19,6 +19,8 @@ var MaximumLengthNoOfDocuments = 10000
 // 10R - 3KB, 1000 - 288KB, 10000 - 2.9MB
 // main collection with documentids 10000R - 1.2 MB
 // after removing document ids from colelction its reduced to 778KB
+// for current scenario
+// for 1 Millon basic data it will consume 290MB
 
 var EVENT_CREATE = "EVENT_CREATE"
 var EVENT_UPDATE = "EVENT_UPDATE"
