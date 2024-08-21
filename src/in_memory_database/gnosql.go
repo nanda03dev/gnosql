@@ -91,14 +91,14 @@ func (gnoSQL *GnoSQL) LoadAllDBs() {
 
 			for _, fileName := range fileNames {
 				if strings.Contains(fileName, utils.CollectionExtension) {
-					if collectionGob, err := ReadCollectionGobFile(fileName); err == nil {
+					if collectionGob, err := ReadAndDecodeFile[CollectionFileStruct](fileName); err == nil {
 						collectionFile = collectionGob
 					}
 				}
-				if strings.Contains(fileName, utils.CollectionDataExtension) {
-					if collectionDataGob, err := ReadCollectionDataGobFile(fileName); err == nil {
+				if strings.Contains(fileName, utils.CollectionBatchExtension) {
+					if collectionDataGob, err := ReadAndDecodeFile[BatchDocuments](fileName); err == nil {
 						var dataFileName = filepath.Base(fileName)
-						if strings.Contains(dataFileName, utils.CollectionDataExtension) {
+						if strings.Contains(dataFileName, utils.CollectionBatchExtension) {
 							documentMaps[dataFileName] = collectionDataGob
 						}
 					}

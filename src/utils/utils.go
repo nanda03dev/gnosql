@@ -154,8 +154,8 @@ func GetCollectionFileName(collectionName string) string {
 	return collectionName + CollectionExtension
 }
 
-func GetCollectionDataFileName() string {
-	return Generate16DigitUUID() + CollectionDataExtension
+func GetCollectionBatchIdFileName() string {
+	return Generate16DigitUUID() + CollectionBatchExtension
 }
 func GetCollectionFolderPath(databaseName string, collectionName string) string {
 	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+collectionName)

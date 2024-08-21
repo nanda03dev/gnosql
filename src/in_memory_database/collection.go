@@ -2,6 +2,7 @@ package in_memory_database
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"gnosql/src/utils"
 	"os"
@@ -14,9 +15,9 @@ import (
 
 type Document map[string]interface{}
 
-type fileNameMapDocument map[string]Document
+type BatchDocuments map[string]Document
 
-type DocumentsMap map[string]fileNameMapDocument // Ex: { file1: {id1: {...Document1}, id2: {...Document2}}, file2: {id1: {...Document1}, id2: {...Document2}} }
+type DocumentsMap map[string]BatchDocuments // Ex: { file1: {id1: {...Document1}, id2: {...Document2}}, file2: {id1: {...Document1}, id2: {...Document2}} }
 
 type DocumentIds []string
 
@@ -36,7 +37,7 @@ type CollectionStats struct {
 	Documents      int      `json:"Documents"`
 }
 
-type FileUpdateStatus map[string]bool
+type BatchUpdateStatus map[string]bool
 
 const EventChannelSize = 1 * 10 * 100 * 1000
 
@@ -44,35 +45,35 @@ const EventChannelSize = 1 * 10 * 100 * 1000
 const TimerToSaveToDisk = 30 * time.Second
 
 type Collection struct {
-	CollectionName       string           `json:"CollectionName"`
-	ParentDBName         string           `json:"ParentDBName"`
-	IndexMap             IndexMap         `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys            []string         `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap         DocumentsMap     `json:"DocumentsMap"`
-	DocumentIds          DocumentIds      `json:"DocumentIds"`
-	CollectionFileName   string           `json:"CollectionFileName"`
-	CollectionFullPath   string           `json:"CollectionFullPath"`
-	LastIndex            int              `json:"LastIndex"`
-	CurrentFileDataName  string           `json:"CurrentFileDataName"`
-	CurrentFileDataCount int              `json:"CurrentFileDataCount"`
-	FileUpdateStatus     FileUpdateStatus `json:"FileUpdateStatus"`
-	mu                   sync.RWMutex
-	IsChanged            bool
+	CollectionName     string            `json:"CollectionName"`
+	ParentDBName       string            `json:"ParentDBName"`
+	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
+	DocumentIds        DocumentIds       `json:"DocumentIds"`
+	CollectionFileName string            `json:"CollectionFileName"`
+	CollectionFullPath string            `json:"CollectionFullPath"`
+	LastIndex          int               `json:"LastIndex"`
+	CurrentBatchId     string            `json:"CurrentBatchId"`
+	CurrentBatchCount  int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus  BatchUpdateStatus `json:"BatchUpdateStatus"`
+	mu                 sync.RWMutex
+	IsChanged          bool
 }
 
 type CollectionFileStruct struct {
-	CollectionName       string           `json:"CollectionName"`
-	ParentDBName         string           `json:"ParentDBName"`
-	IndexMap             IndexMap         `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys            []string         `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap         DocumentsMap     `json:"DocumentsMap"`
-	DocumentIds          DocumentIds      `json:"DocumentIds"`
-	CollectionFileName   string           `json:"CollectionFileName"`
-	CollectionFullPath   string           `json:"CollectionFullPath"`
-	LastIndex            int              `json:"LastIndex"`
-	CurrentFileDataName  string           `json:"CurrentFileDataName"`
-	CurrentFileDataCount int              `json:"CurrentFileDataCount"`
-	FileUpdateStatus     FileUpdateStatus `json:"FileUpdateStatus"`
+	CollectionName     string            `json:"CollectionName"`
+	ParentDBName       string            `json:"ParentDBName"`
+	IndexMap           IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys          []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap       DocumentsMap      `json:"DocumentsMap"`
+	DocumentIds        DocumentIds       `json:"DocumentIds"`
+	CollectionFileName string            `json:"CollectionFileName"`
+	CollectionFullPath string            `json:"CollectionFullPath"`
+	LastIndex          int               `json:"LastIndex"`
+	CurrentBatchId     string            `json:"CurrentBatchId"`
+	CurrentBatchCount  int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus  BatchUpdateStatus `json:"BatchUpdateStatus"`
 }
 
 type CollectionInput struct {
@@ -87,24 +88,24 @@ func CreateCollection(collectionInput CollectionInput, db *Database) *Collection
 
 	fileName := utils.GetCollectionFileName(collectionInput.CollectionName)
 	fullPath := utils.GetCollectionFilePath(db.DatabaseName, collectionInput.CollectionName, fileName)
-	CurrentFileDataName := utils.GetCollectionDataFileName()
+	currentBatchId := utils.GetCollectionBatchIdFileName()
 
 	collection :=
 		&Collection{
-			CollectionName:       collectionInput.CollectionName,
-			ParentDBName:         db.DatabaseName,
-			IndexKeys:            collectionInput.IndexKeys,
-			DocumentsMap:         make(DocumentsMap),
-			DocumentIds:          make(DocumentIds, 0),
-			IndexMap:             make(IndexMap),
-			CollectionFileName:   fileName,
-			CollectionFullPath:   fullPath,
-			mu:                   sync.RWMutex{},
-			IsChanged:            true,
-			LastIndex:            0,
-			CurrentFileDataName:  CurrentFileDataName,
-			FileUpdateStatus:     FileUpdateStatus{CurrentFileDataName: true},
-			CurrentFileDataCount: 0,
+			CollectionName:     collectionInput.CollectionName,
+			ParentDBName:       db.DatabaseName,
+			IndexKeys:          collectionInput.IndexKeys,
+			DocumentsMap:       make(DocumentsMap),
+			DocumentIds:        make(DocumentIds, 0),
+			IndexMap:           make(IndexMap),
+			CollectionFileName: fileName,
+			CollectionFullPath: fullPath,
+			mu:                 sync.RWMutex{},
+			IsChanged:          true,
+			LastIndex:          0,
+			CurrentBatchId:     currentBatchId,
+			BatchUpdateStatus:  BatchUpdateStatus{currentBatchId: true},
+			CurrentBatchCount:  0,
 		}
 
 	collection.SaveCollectionToFile()
@@ -118,20 +119,20 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 
 	for _, collectionGob := range collectionsGob {
 		collection := &Collection{
-			CollectionName:       collectionGob.CollectionName,
-			ParentDBName:         collectionGob.ParentDBName,
-			IndexKeys:            collectionGob.IndexKeys,
-			DocumentsMap:         collectionGob.DocumentsMap,
-			DocumentIds:          collectionGob.DocumentIds,
-			IndexMap:             collectionGob.IndexMap,
-			CollectionFileName:   collectionGob.CollectionFileName,
-			CollectionFullPath:   collectionGob.CollectionFullPath,
-			LastIndex:            collectionGob.LastIndex,
-			CurrentFileDataName:  collectionGob.CurrentFileDataName,
-			CurrentFileDataCount: collectionGob.CurrentFileDataCount,
-			FileUpdateStatus:     collectionGob.FileUpdateStatus,
-			mu:                   sync.RWMutex{},
-			IsChanged:            false,
+			CollectionName:     collectionGob.CollectionName,
+			ParentDBName:       collectionGob.ParentDBName,
+			IndexKeys:          collectionGob.IndexKeys,
+			DocumentsMap:       collectionGob.DocumentsMap,
+			DocumentIds:        collectionGob.DocumentIds,
+			IndexMap:           collectionGob.IndexMap,
+			CollectionFileName: collectionGob.CollectionFileName,
+			CollectionFullPath: collectionGob.CollectionFullPath,
+			LastIndex:          collectionGob.LastIndex,
+			CurrentBatchId:     collectionGob.CurrentBatchId,
+			CurrentBatchCount:  collectionGob.CurrentBatchCount,
+			BatchUpdateStatus:  collectionGob.BatchUpdateStatus,
+			mu:                 sync.RWMutex{},
+			IsChanged:          false,
 		}
 
 		collection.StartInternalFunctions()
@@ -161,29 +162,29 @@ func (collection *Collection) Create(document Document) Document {
 	document["created"] = utils.UuidStringToTimeString(uniqueUuid)
 	document["docIndex"] = documentIndex
 
-	var fileDataName = collection.CurrentFileDataName
-	var currentFileDataCount = collection.CurrentFileDataCount + 1
+	var batchId = collection.CurrentBatchId
+	var batchCount = collection.CurrentBatchCount + 1
 
-	if currentFileDataCount > utils.MaximumLengthNoOfDocuments {
-		fileDataName = utils.GetCollectionDataFileName()
-		collection.CurrentFileDataName = fileDataName
-		currentFileDataCount = 0
+	if batchCount > utils.MaximumLengthNoOfDocuments {
+		batchId = utils.GetCollectionBatchIdFileName()
+		collection.CurrentBatchId = batchId
+		batchCount = 0
 	}
 
-	if _, exists := collection.DocumentsMap[fileDataName]; !exists {
-		collection.DocumentsMap[fileDataName] = make(fileNameMapDocument)
+	if _, exists := collection.DocumentsMap[batchId]; !exists {
+		collection.DocumentsMap[batchId] = make(BatchDocuments)
 	}
 
-	collection.DocumentsMap[fileDataName][uniqueUuid] = document
+	collection.DocumentsMap[batchId][uniqueUuid] = document
 
 	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
 
 	collection.createIndex(document)
 
 	collection.IsChanged = true
-	collection.FileUpdateStatus[fileDataName] = true
+	collection.BatchUpdateStatus[batchId] = true
 	collection.LastIndex = documentIndex
-	collection.CurrentFileDataCount = currentFileDataCount
+	collection.CurrentBatchCount = batchCount
 	return document
 }
 
@@ -413,64 +414,61 @@ outerLoop:
 	return filteredIds
 }
 
-func (collection *Collection) Update(id string, updatedDocument Document) Document {
+func (collection *Collection) Update(id string, updatedDocument Document) error {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
 
-	fmt.Printf("\n updatedDocument %v ", updatedDocument)
-
-	var exists, fileDataName, document = collection.isDocumentExists(id)
+	var exists, batchId, document = collection.isDocumentExists(id)
 
 	if !exists {
-		return nil
+		return errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	collection.updateIndex(document, updatedDocument)
 
-	collection.DocumentsMap[fileDataName][id] = updatedDocument
+	collection.DocumentsMap[batchId][id] = updatedDocument
 
 	collection.IsChanged = true
-	collection.FileUpdateStatus[fileDataName] = true
+	collection.BatchUpdateStatus[batchId] = true
 
-	fmt.Printf("\n collection.File status %v ", collection.FileUpdateStatus)
-	return updatedDocument
+	return nil
 }
 
 func (collection *Collection) Delete(id string) error {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
 
-	var exists, fileDataName, document = collection.isDocumentExists(id)
+	var exists, batchId, document = collection.isDocumentExists(id)
 
 	if !exists {
-		return fmt.Errorf("docId '%s' not found in the collection", id)
+		return errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
 	}
 
-	delete(collection.DocumentsMap[fileDataName], id)
+	delete(collection.DocumentsMap[batchId], id)
 	collection.deleteIndex(document)
 
 	collection.IsChanged = true
-	collection.FileUpdateStatus[fileDataName] = true
+	collection.BatchUpdateStatus[batchId] = true
 
 	return nil
 }
 func (collection *Collection) isDocumentExists(id string) (bool, string, Document) {
 	var document Document
-	var fileDataName string
+	var batchId string
 
-	for fileName, documents := range collection.DocumentsMap {
+	for eachBatchId, documents := range collection.DocumentsMap {
 
 		if value, exists := documents[id]; exists {
 			document = value
-			fileDataName = fileName
+			batchId = eachBatchId
 		}
 	}
 
 	if _, exists := document["docId"]; !exists {
-		return false, fileDataName, document
+		return false, batchId, document
 	}
 
-	return true, fileDataName, document
+	return true, batchId, document
 }
 
 func (collection *Collection) GetIds() []string {
@@ -584,34 +582,33 @@ func (collection *Collection) SaveCollectionToFile() {
 	}
 
 	temp := CollectionFileStruct{
-		CollectionName: collection.CollectionName,
-		ParentDBName:   collection.ParentDBName,
-		IndexKeys:      collection.IndexKeys,
-		// DocumentsMap:         collection.DocumentsMap,
-		DocumentIds:          collection.DocumentIds,
-		IndexMap:             collection.IndexMap,
-		CollectionFileName:   collection.CollectionFileName,
-		CollectionFullPath:   collection.CollectionFullPath,
-		LastIndex:            collection.LastIndex,
-		CurrentFileDataName:  collection.CurrentFileDataName,
-		CurrentFileDataCount: collection.CurrentFileDataCount,
-		FileUpdateStatus:     collection.FileUpdateStatus,
+		CollectionName:     collection.CollectionName,
+		ParentDBName:       collection.ParentDBName,
+		IndexKeys:          collection.IndexKeys,
+		DocumentIds:        collection.DocumentIds,
+		IndexMap:           collection.IndexMap,
+		CollectionFileName: collection.CollectionFileName,
+		CollectionFullPath: collection.CollectionFullPath,
+		LastIndex:          collection.LastIndex,
+		CurrentBatchId:     collection.CurrentBatchId,
+		CurrentBatchCount:  collection.CurrentBatchCount,
+		BatchUpdateStatus:  collection.BatchUpdateStatus,
 	}
 
 	collection.IsChanged = false
 
-	for fileName, isUpdated := range collection.FileUpdateStatus {
+	for fileName, isUpdated := range collection.BatchUpdateStatus {
 		if documents, exists := collection.DocumentsMap[fileName]; exists && isUpdated {
 			gobData, err := utils.EncodeGob(documents)
 
 			if err == nil {
 				go writeGobDataToDisk(utils.GetCollectionFilePath(collection.ParentDBName, collection.CollectionName, fileName), gobData)
 			} else {
-				fmt.Printf("\n collection: %v \t filename: %v \t GOB encoding error: %v ", collection.CollectionName, fileName, err)
+				fmt.Printf("\n collection: %v \t batch filename: %v \t GOB encoding error: %v ", collection.CollectionName, fileName, err)
 			}
 
 		} else {
-			fmt.Printf("\n fileName: %v does not exists in DocumentsMap ", fileName)
+			fmt.Printf("\n batchid: %v does not exists in DocumentsMap ", fileName)
 		}
 	}
 
@@ -629,28 +626,6 @@ func writeGobDataToDisk(filePath string, data []byte) {
 	if err != nil {
 		fmt.Printf("\n filePath: %v Error saving collection GOB to file:", err)
 	}
-}
-
-func writeCollectionTofileBackground(temp CollectionFileStruct) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("Worker panic recovered: %v. \n", r)
-		}
-	}()
-
-	gobData, err := utils.EncodeGob(temp)
-
-	if err != nil {
-		fmt.Println("GOB encoding error:", err)
-	}
-
-	err = utils.SaveToFile(temp.CollectionFullPath, gobData)
-
-	if err != nil {
-		fmt.Println("Error saving collection GOB to file:", err)
-	}
-
-	fmt.Printf("\n EVENT_SAVE_TO_DISK : GOB data saved to %v \n", temp.CollectionName)
 }
 
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
@@ -675,45 +650,25 @@ func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionI
 	return collectionsInput
 }
 
-func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
-	var gobData CollectionFileStruct
+func ReadAndDecodeFile[T any](filePath string) (T, error) {
+	var data T
 
 	fileData, err := os.ReadFile(filePath)
 
 	if err != nil {
-		fmt.Printf("\n Collection file %s reading, Error %v", filePath, err)
-		return gobData, err
+		fmt.Printf("\n Reading file %s, Error %v", filePath, err)
+		return data, err
 	}
 
-	err = utils.DecodeGob(fileData, &gobData)
+	err = utils.DecodeGob(fileData, &data)
 
 	if err != nil {
-		fmt.Printf("\n Collection file %s decoding , Error %v", filePath, err)
+		fmt.Printf("\n Decoding file %s, Error %v", filePath, err)
 
-		return gobData, err
+		return data, err
 	}
 
-	return gobData, nil
-}
-func ReadCollectionDataGobFile(filePath string) (fileNameMapDocument, error) {
-	var gobData fileNameMapDocument
-
-	fileData, err := os.ReadFile(filePath)
-
-	if err != nil {
-		fmt.Printf("\n Collection file %s reading, Error %v", filePath, err)
-		return gobData, err
-	}
-
-	err = utils.DecodeGob(fileData, &gobData)
-
-	if err != nil {
-		fmt.Printf("\n Collection file %s decoding , Error %v", filePath, err)
-
-		return gobData, err
-	}
-
-	return gobData, nil
+	return data, nil
 }
 
 func (collection *Collection) StartInternalFunctions() {
