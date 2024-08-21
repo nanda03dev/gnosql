@@ -8,7 +8,6 @@ import (
 	"os"
 	"slices"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -219,6 +218,7 @@ func (collection *Collection) Filter(reqFilter MapInterface) []Document {
 	filtersWithIndex := make([]MapInterface, 0)
 
 outerLoop:
+	// constructing IndexFilterKeys and Non-IndexFilterKeys
 	for _, filter := range filters {
 		for _, indexKey := range collection.IndexKeys {
 			if indexKey == filter["key"] {
@@ -229,35 +229,49 @@ outerLoop:
 		filtersWithoutIndex = append(filtersWithoutIndex, filter)
 	}
 
-	var filteredIds DocumentIds
+	var filteredDocIds = make(DocumentIds, 0)
 
 	// if filter have index keys, first filter ids based on
 	if len(filtersWithIndex) > 0 {
-		filteredIds = collection.filterWithIndex(filtersWithIndex)
-	} else {
-		filteredIds = collection.DocumentIds
+		filteredDocIds = collection.GetfilteredIdsWithIndexkeys(filtersWithIndex)
 	}
 
 	// fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
 	// fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
-	// fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
+	// fmt.Printf("\n Scanning %d documents \n", len(filteredDocIds))
 
-	filteredIdsLength := len(filteredIds)
+	filteredDocIdsLength := len(filteredDocIds)
 
 	workerCount := 4
 	// Use a WaitGroup to wait for the goroutine to finish
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
 
-	var ResultChannelSize = filteredIdsLength / workerCount
-
 	// Create a channel to communicate results
-	resultChannel := make(chan Document, ResultChannelSize)
+	resultChannel := make(chan Document)
+	var isIndexQuery = len(filtersWithIndex) > 0
 
-	for i := 0; i < workerCount; i++ {
-		start := i * filteredIdsLength / workerCount
-		end := (i + 1) * filteredIdsLength / workerCount
-		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds, start, end)
+	// filter document with index query
+	if isIndexQuery {
+		for i := 0; i < workerCount; i++ {
+			start := i * filteredDocIdsLength / workerCount
+			end := (i + 1) * filteredDocIdsLength / workerCount
+			go collection.filterWithIndex(&wg, resultChannel, filtersWithoutIndex, start, end, filteredDocIds)
+		}
+	} else {
+		var allBatchIds = make([]string, 0)
+
+		for batchId := range collection.DocumentsMap {
+			allBatchIds = append(allBatchIds, batchId)
+		}
+		var allBatchIdsLength = len(allBatchIds)
+
+		for i := 0; i < workerCount; i++ {
+			start := i * allBatchIdsLength / workerCount
+			end := (i + 1) * allBatchIdsLength / workerCount
+			go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, start, end, allBatchIds)
+		}
+
 	}
 
 	// Use another goroutine to close the result channel when the filtering is done
@@ -295,12 +309,11 @@ outerLoop:
 	return limitedResult
 }
 
-func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds, start int, end int) {
+func (collection *Collection) filterWithIndex(wg *sync.WaitGroup, resultChannel chan Document, filters []MapInterface, start int, end int, filteredDocIds DocumentIds) {
 	defer wg.Done()
 
 	for i := start; i < end; i++ {
-		id := filteredIds[i]
-		var isMatch bool = true
+		id := filteredDocIds[i]
 
 		var exists, _, document = collection.isDocumentExists(id)
 
@@ -309,35 +322,7 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 			continue
 		}
 
-		for _, filter := range filter {
-
-			if value, ok := document[filter["key"].(string)]; ok {
-				filterValue := filter["value"].(string)
-				switch v := value.(type) {
-				case int:
-					// Convert filterValue to int for comparison
-					if filterInt, err := strconv.Atoi(filterValue); err == nil {
-						if v != filterInt {
-							isMatch = false
-							break
-						}
-					} else {
-						// Handle conversion error or invalid filter value
-						isMatch = false
-						break
-					}
-				case string:
-					// Direct string comparison
-					if v != filterValue {
-						isMatch = false
-						break
-					}
-				default:
-					// Handle other types or unsupported types
-					isMatch = false
-				}
-			}
-		}
+		var isMatch bool = IsMatchWithDocument(filters, document)
 
 		if isMatch {
 			resultChannel <- document
@@ -345,7 +330,41 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 	}
 }
 
-func (collection *Collection) filterWithIndex(filters []MapInterface) DocumentIds {
+func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filters []MapInterface, start int, end int, allBatchIds []string) {
+	defer wg.Done()
+
+	for i := start; i < end; i++ {
+		var batchDocuments = collection.DocumentsMap[allBatchIds[i]]
+
+		for _, document := range batchDocuments {
+			var isMatch bool = IsMatchWithDocument(filters, document)
+
+			if isMatch {
+				resultChannel <- document
+			}
+		}
+	}
+}
+
+func IsMatchWithDocument(filters []MapInterface, document Document) bool {
+	for _, filter := range filters {
+		if value, ok := document[filter["key"].(string)]; ok {
+			// Convert both value and filter["value"] to strings for comparison
+			documentValueStr := fmt.Sprintf("%v", value)
+			filterValueStr := fmt.Sprintf("%v", filter["value"])
+
+			if documentValueStr != filterValueStr {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (collection *Collection) GetfilteredIdsWithIndexkeys(filters []MapInterface) DocumentIds {
 	filteredIndexMap := make(IndexMap)
 
 	for _, filter := range filters {
@@ -356,6 +375,7 @@ func (collection *Collection) filterWithIndex(filters []MapInterface) DocumentId
 		}
 	}
 
+	// Sorting index filters, using this it will fetch and query small no of records filters
 	slices.SortFunc(filters,
 		func(a, b MapInterface) int {
 			keyToSearchA := a["key"].(string)
