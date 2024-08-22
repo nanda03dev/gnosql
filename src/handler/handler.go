@@ -2,9 +2,9 @@ package handler
 
 import (
 	"fmt"
+	"gnosql/src/global_constants"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
-	"gnosql/src/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,7 +22,7 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -43,7 +43,7 @@ func ConnectDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -64,7 +64,7 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseDeleteRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -109,7 +109,7 @@ func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionCreateRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -132,7 +132,7 @@ func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionDeleteRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -152,7 +152,7 @@ func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionGetAllRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -175,7 +175,7 @@ func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionStatsRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -200,7 +200,7 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentCreateRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -223,7 +223,7 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentReadRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -246,7 +246,7 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentFilterRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -270,7 +270,7 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentUpdateRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -293,7 +293,7 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentDeleteRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 
@@ -315,7 +315,7 @@ func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentGetAllRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ERROR_WHILE_BINDING_JSON)
+		c.JSON(http.StatusBadRequest, global_constants.ERROR_WHILE_BINDING_JSON)
 		return
 	}
 

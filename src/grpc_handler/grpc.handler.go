@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	pb "gnosql/proto"
+	"gnosql/src/global_constants"
 	"gnosql/src/in_memory_database"
 	"gnosql/src/service"
-	"gnosql/src/utils"
 )
 
 type GnoSQLServer struct {
@@ -127,7 +127,7 @@ func (s *GnoSQLServer) CreateDocument(ctx context.Context, req *pb.DocumentCreat
 	UnMarsalErr := json.Unmarshal([]byte(req.Document), &newDocument)
 
 	if UnMarsalErr != nil {
-		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
+		return response, errors.New(global_constants.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
 	result, err := service.DocumentCreate(s.GnoSQL, req.DatabaseName, req.CollectionName, newDocument)
@@ -167,7 +167,7 @@ func (s *GnoSQLServer) FilterDocument(ctx context.Context, req *pb.DocumentFilte
 	UnMarsalErr := json.Unmarshal([]byte(req.Filter), &filter)
 
 	if UnMarsalErr != nil {
-		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
+		return response, errors.New(global_constants.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
 	result, err := service.DocumentFilter(s.GnoSQL, req.DatabaseName, req.CollectionName, filter)
@@ -191,7 +191,7 @@ func (s *GnoSQLServer) UpdateDocument(ctx context.Context, req *pb.DocumentUpdat
 	UnMarsalErr := json.Unmarshal([]byte(req.Document), &document)
 
 	if UnMarsalErr != nil {
-		return response, errors.New(utils.ERROR_WHILE_UNMARSHAL_JSON)
+		return response, errors.New(global_constants.ERROR_WHILE_UNMARSHAL_JSON)
 	}
 
 	result, err := service.DocumentUpdate(s.GnoSQL, req.DatabaseName, req.CollectionName, req.DocId, document)
@@ -253,7 +253,7 @@ func ConvertDocumentMapToString(document in_memory_database.Document) (string, e
 	responseDataString, MarshalErr := json.Marshal(document)
 
 	if MarshalErr != nil {
-		return "", errors.New(utils.ERROR_WHILE_MARSHAL_JSON)
+		return "", errors.New(global_constants.ERROR_WHILE_MARSHAL_JSON)
 	}
 
 	return string(responseDataString), nil
@@ -264,7 +264,7 @@ func ConvertDocumentMapsToString(document []in_memory_database.Document) (string
 	responseDataString, MarshalErr := json.Marshal(document)
 
 	if MarshalErr != nil {
-		return "", errors.New(utils.ERROR_WHILE_MARSHAL_JSON)
+		return "", errors.New(global_constants.ERROR_WHILE_MARSHAL_JSON)
 	}
 	return string(responseDataString), nil
 }

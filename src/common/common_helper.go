@@ -1,8 +1,10 @@
-package utils
+package common
 
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
+	"gnosql/src/global_constants"
 	"os"
 	"path/filepath"
 	"time"
@@ -55,7 +57,7 @@ func TimeToString(time time.Time) string {
 }
 
 func CreateDatabaseFolder() bool {
-	if _, err := CreateFolder(GNOSQLFULLPATH); err == nil {
+	if _, err := CreateFolder(global_constants.GNOSQL_FULL_PATH); err == nil {
 		return true
 	}
 	return false
@@ -72,9 +74,9 @@ func CreateFolder(nestedFolderPath string) (string, error) {
 			println("Error while create %s directory %v", nestedFolderPath, err)
 			return "", err
 		}
-		println("gnosql database folder created successfully")
+		println("GnoSQL database folder created successfully")
 	} else {
-		println("gnosql database folder already exists")
+		println("GnoSQL database folder already exists")
 	}
 
 	return nestedFolderPath, nil
@@ -139,22 +141,37 @@ func ReadFile(filePath string) ([]byte, error) {
 }
 
 func GetDatabaseFileName(databaseName string) string {
-	return databaseName + DBExtension
+	return databaseName + global_constants.DB_EXTENSION
 }
 func GetDatabaseFolderPath(databaseName string) string {
-	return filepath.Join(GNOSQLFULLPATH, databaseName)
+	return filepath.Join(global_constants.GNOSQL_FULL_PATH, databaseName)
 }
-
 func GetDatabaseFilePath(databaseName, fileName string) string {
-	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
+	return filepath.Join(global_constants.GNOSQL_FULL_PATH, databaseName+"/"+fileName)
 }
 
 func GetCollectionFileName(collectionName string) string {
-	return collectionName + CollectionExtension
+	return collectionName + global_constants.COLLECTION_EXTENSION
 }
 
-func GetCollectionFilePath(databaseName string, fileName string) string {
-	return filepath.Join(GNOSQLFULLPATH, databaseName+"/"+fileName)
+func GetCollectionBatchIdFileName() string {
+	return Generate16DigitUUID() + global_constants.COLLECTION_BATCH_EXTENSION
+}
+func GetCollectionFolderPath(databaseName string, collectionName string) string {
+	return filepath.Join(global_constants.GNOSQL_FULL_PATH, databaseName+"/"+collectionName)
+}
+func GetCollectionFilePath(databaseName string, collectionName string, fileName string) string {
+	return GetCollectionFolderPath(databaseName, collectionName) + "/" + fileName
+}
+
+func DeleteFolder(filePath string) bool {
+	err := os.RemoveAll(filePath)
+	if err != nil {
+		fmt.Println("Error deleting file or directory:", err)
+		return false
+	}
+
+	return true
 }
 
 func DeleteFile(filePath string) bool {
@@ -181,9 +198,57 @@ func DecodeGob(data []byte, target interface{}) error {
 }
 
 func SaveToFile(filename string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+		fmt.Printf("\n err %v ", err)
+
+		return err
+	}
+
 	return os.WriteFile(filename, data, 0644)
 }
 
 func ReadFromFile(filename string) ([]byte, error) {
 	return os.ReadFile(filename)
+}
+
+func WriteGobDataToDisk(filePath string, data []byte) {
+	err := SaveToFile(filePath, data)
+
+	if err != nil {
+		fmt.Printf("\n filePath: %v Error saving collection GOB to file:", err)
+	}
+}
+
+func EncodeGOBAndWriteFile[T any](filePath string, data T) (error, error) {
+	gobData, encodeErr := EncodeGob(data)
+	var writeErr error
+
+	if encodeErr == nil {
+		writeErr = SaveToFile(filePath, gobData)
+	}
+
+	fmt.Printf("\n Error while write file: %v \t EncodeError: %v \t WriteFileError: %v ", filePath, encodeErr, writeErr)
+
+	return encodeErr, writeErr
+}
+
+func ReadFileAndDecodeGOB[T any](filePath string) (T, error) {
+	var data T
+
+	fileData, err := os.ReadFile(filePath)
+
+	if err != nil {
+		fmt.Printf("\n Reading file %s, Error %v", filePath, err)
+		return data, err
+	}
+
+	err = DecodeGob(fileData, &data)
+
+	if err != nil {
+		fmt.Printf("\n Decoding file %s, Error %v", filePath, err)
+
+		return data, err
+	}
+
+	return data, nil
 }

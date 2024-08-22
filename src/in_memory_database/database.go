@@ -2,47 +2,35 @@ package in_memory_database
 
 import (
 	"fmt"
-	"gnosql/src/utils"
+	"gnosql/src/common"
 	"os"
 )
 
 type Config MapInterface
 
 type Database struct {
-	DatabaseName         string        `json:"DatabaseName"`
-	DatabaseFileName     string        `json:"DatabaseFileName"`
-	DatabaseFileFullPath string        `json:"DatabaseFileFullPath"`
-	DatabaseFolderPath   string        `json:"DatabaseFolderPath"`
-	Collections          []*Collection `json:"Collections"`
-	Config               Config        `json:"Config"`
+	DatabaseName string        `json:"DatabaseName"`
+	Collections  []*Collection `json:"Collections"`
+	Config       Config        `json:"Config"`
 }
 
 type DatabaseFileStruct struct {
-	DatabaseName         string `json:"DatabaseName"`
-	DatabaseFileName     string `json:"DatabaseFileName"`
-	DatabaseFileFullPath string `json:"DatabaseFileFullPath"`
-	DatabaseFolderPath   string `json:"DatabaseFolderPath"`
-	Config               Config `json:"Config"`
+	DatabaseName string `json:"DatabaseName"`
+	Config       Config `json:"Config"`
 }
 
 func CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Database {
 	Config := make(Config)
 	Config["version"] = 1
 
-	databasePath := utils.GetDatabaseFolderPath(databaseName)
-	fileName := utils.GetDatabaseFileName(databaseName)
-	filePath := utils.GetDatabaseFilePath(databaseName, fileName)
-
 	db := &Database{
-		DatabaseName:         databaseName,
-		DatabaseFileName:     fileName,
-		DatabaseFileFullPath: filePath,
-		DatabaseFolderPath:   databasePath,
-		Collections:          make([]*Collection, 0),
-		Config:               Config,
+		DatabaseName: databaseName,
+		Collections:  make([]*Collection, 0),
+		Config:       Config,
 	}
 
-	utils.CreateFolder(databasePath)
+	common.CreateFolder(common.GetDatabaseFolderPath(databaseName))
+
 	db.SaveDatabaseToFile()
 	db.CreateColls(collectionsInput)
 
@@ -51,21 +39,16 @@ func CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Da
 
 func LoadDatabase(database DatabaseFileStruct) *Database {
 	return &Database{
-		DatabaseName:         database.DatabaseName,
-		DatabaseFileName:     database.DatabaseFileName,
-		DatabaseFileFullPath: database.DatabaseFileFullPath,
-		DatabaseFolderPath:   database.DatabaseFolderPath,
-		Collections:          make([]*Collection, 0),
-		Config:               database.Config,
+		DatabaseName: database.DatabaseName,
+		Collections:  make([]*Collection, 0),
+		Config:       database.Config,
 	}
 }
 
 func (db *Database) DeleteDatabase() {
-
-	os.RemoveAll(db.DatabaseFolderPath)
-
+	common.DeleteFolder(common.GetDatabaseFolderPath(db.DatabaseName))
 	for _, collection := range db.Collections {
-		collection.DeleteCollection(true)
+		collection.DeleteCollection(false)
 	}
 }
 
@@ -78,7 +61,6 @@ func (db *Database) CreateColls(collectionsInput []CollectionInput) []*Collectio
 			collections = append(collections, collection)
 		}
 	}
-
 	return collections
 }
 
@@ -92,10 +74,11 @@ func (db *Database) DeleteColls(collectionNamesToDelete []string) *Database {
 				ToBeDeleted = true
 			}
 		}
+
 		if !ToBeDeleted {
 			Collections = append(Collections, collection)
 		} else {
-			collection.DeleteCollection(false)
+			collection.DeleteCollection(true)
 		}
 
 	}
@@ -130,19 +113,17 @@ func (db *Database) SaveDatabaseToFile() {
 
 	// Convert struct to gob
 	temp := DatabaseFileStruct{
-		DatabaseName:         db.DatabaseName,
-		DatabaseFileName:     db.DatabaseFileName,
-		DatabaseFileFullPath: db.DatabaseFileFullPath,
-		Config:               db.Config,
+		DatabaseName: db.DatabaseName,
+		Config:       db.Config,
 	}
 
-	gobData, err := utils.EncodeGob(temp)
+	gobData, err := common.EncodeGob(temp)
 
 	if err != nil {
 		fmt.Println("GOB encoding error:", err)
 	}
 
-	err = utils.SaveToFile(db.DatabaseFileFullPath, gobData)
+	err = common.SaveToFile(common.GetDatabaseFilePath(db.DatabaseName, common.GetDatabaseFileName(db.DatabaseName)), gobData)
 
 	if err != nil {
 		fmt.Println("Error saving database GOB to file:", err)
@@ -161,7 +142,7 @@ func ReadDatabaseGobFile(filePath string) (DatabaseFileStruct, error) {
 		return gobData, err
 	}
 
-	err = utils.DecodeGob(fileData, &gobData)
+	err = common.DecodeGob(fileData, &gobData)
 
 	if err != nil {
 		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)

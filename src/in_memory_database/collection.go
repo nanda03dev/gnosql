@@ -1,20 +1,17 @@
 package in_memory_database
 
 import (
-	"cmp"
 	"fmt"
-	"gnosql/src/utils"
-	"os"
-	"slices"
-	"sort"
-	"strconv"
+	"gnosql/src/common"
+	"gnosql/src/global_constants"
 	"sync"
-	"time"
 )
 
 type Document map[string]interface{}
 
-type DocumentsMap map[string]Document // Ex: {id1: {...Document1}, id2: {...Document2} }
+type BatchDocuments map[string]Document
+
+type DocumentsMap map[string]BatchDocuments // Ex: { file1: {id1: {...Document1}, id2: {...Document2}}, file2: {id1: {...Document1}, id2: {...Document2}} }
 
 type DocumentIds []string
 
@@ -34,35 +31,32 @@ type CollectionStats struct {
 	Documents      int      `json:"Documents"`
 }
 
-const EventChannelSize = 1 * 10 * 100 * 1000
-
-// const TimerToSaveToDisk = 1 * time.Minute
-const TimerToSaveToDisk = 30 * time.Second
+type BatchUpdateStatus map[string]bool
 
 type Collection struct {
-	CollectionName     string       `json:"CollectionName"`
-	ParentDBName       string       `json:"ParentDBName"`
-	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
-	DocumentIds        DocumentIds  `json:"DocumentIds"`
-	CollectionFileName string       `json:"CollectionFileName"`
-	CollectionFullPath string       `json:"CollectionFullPath"`
-	LastIndex          int          `json:"LastIndex"`
-	mu                 sync.RWMutex
-	IsChanged          bool
+	CollectionName    string            `json:"CollectionName"`
+	DatabaseName      string            `json:"DatabaseName"`
+	IndexMap          IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys         []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap      DocumentsMap      `json:"DocumentsMap"`
+	LastIndex         int               `json:"LastIndex"`
+	CurrentBatchId    string            `json:"CurrentBatchId"`
+	CurrentBatchCount int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus BatchUpdateStatus `json:"BatchUpdateStatus"`
+	IsChanged         bool
+	mu                sync.RWMutex
 }
 
 type CollectionFileStruct struct {
-	CollectionName     string       `json:"CollectionName"`
-	ParentDBName       string       `json:"ParentDBName"`
-	IndexMap           IndexMap     `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
-	IndexKeys          []string     `json:"IndexKeys"` // Ex: [ "city", "pincode"]
-	DocumentsMap       DocumentsMap `json:"DocumentsMap"`
-	DocumentIds        DocumentIds  `json:"DocumentIds"`
-	CollectionFileName string       `json:"CollectionFileName"`
-	CollectionFullPath string       `json:"CollectionFullPath"`
-	LastIndex          int          `json:"LastIndex"`
+	CollectionName    string            `json:"CollectionName"`
+	DatabaseName      string            `json:"DatabaseName"`
+	IndexMap          IndexMap          `json:"IndexMap"`  // Ex: { city :{ chennai: {id1: ok , ids2: ok}}}
+	IndexKeys         []string          `json:"IndexKeys"` // Ex: [ "city", "pincode"]
+	DocumentsMap      DocumentsMap      `json:"DocumentsMap"`
+	LastIndex         int               `json:"LastIndex"`
+	CurrentBatchId    string            `json:"CurrentBatchId"`
+	CurrentBatchCount int               `json:"CurrentBatchCount"`
+	BatchUpdateStatus BatchUpdateStatus `json:"BatchUpdateStatus"`
 }
 
 type CollectionInput struct {
@@ -74,23 +68,21 @@ type CollectionInput struct {
 }
 
 func CreateCollection(collectionInput CollectionInput, db *Database) *Collection {
-
-	fileName := utils.GetCollectionFileName(collectionInput.CollectionName)
-	fullPath := utils.GetCollectionFilePath(db.DatabaseName, fileName)
+	currentBatchId := common.GetCollectionBatchIdFileName()
 
 	collection :=
 		&Collection{
-			CollectionName:     collectionInput.CollectionName,
-			ParentDBName:       db.DatabaseName,
-			IndexKeys:          collectionInput.IndexKeys,
-			DocumentsMap:       make(DocumentsMap),
-			DocumentIds:        make(DocumentIds, 0),
-			IndexMap:           make(IndexMap),
-			CollectionFileName: fileName,
-			CollectionFullPath: fullPath,
-			mu:                 sync.RWMutex{},
-			IsChanged:          false,
-			LastIndex:          0,
+			CollectionName:    collectionInput.CollectionName,
+			DatabaseName:      db.DatabaseName,
+			IndexKeys:         collectionInput.IndexKeys,
+			DocumentsMap:      make(DocumentsMap),
+			IndexMap:          make(IndexMap),
+			IsChanged:         true,
+			LastIndex:         0,
+			CurrentBatchId:    currentBatchId,
+			BatchUpdateStatus: BatchUpdateStatus{currentBatchId: true},
+			CurrentBatchCount: 0,
+			mu:                sync.RWMutex{},
 		}
 
 	collection.SaveCollectionToFile()
@@ -104,335 +96,61 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 
 	for _, collectionGob := range collectionsGob {
 		collection := &Collection{
-			CollectionName:     collectionGob.CollectionName,
-			ParentDBName:       collectionGob.ParentDBName,
-			IndexKeys:          collectionGob.IndexKeys,
-			DocumentsMap:       collectionGob.DocumentsMap,
-			DocumentIds:        collectionGob.DocumentIds,
-			IndexMap:           collectionGob.IndexMap,
-			CollectionFileName: collectionGob.CollectionFileName,
-			CollectionFullPath: collectionGob.CollectionFullPath,
-			LastIndex:          collectionGob.LastIndex,
-			mu:                 sync.RWMutex{},
-			IsChanged:          false,
+			CollectionName:    collectionGob.CollectionName,
+			DatabaseName:      collectionGob.DatabaseName,
+			IndexKeys:         collectionGob.IndexKeys,
+			DocumentsMap:      collectionGob.DocumentsMap,
+			IndexMap:          collectionGob.IndexMap,
+			LastIndex:         collectionGob.LastIndex,
+			CurrentBatchId:    collectionGob.CurrentBatchId,
+			CurrentBatchCount: collectionGob.CurrentBatchCount,
+			BatchUpdateStatus: collectionGob.BatchUpdateStatus,
+			IsChanged:         false,
+			mu:                sync.RWMutex{},
 		}
 
-		collection.StartInternalFunctions()
-
+		go collection.StartInternalFunctions()
 		collections = append(collections, collection)
 	}
 	return collections
 }
 
-func (collection *Collection) DeleteCollection(IsDbDeleted bool) {
-	if !IsDbDeleted {
-		utils.DeleteFile(collection.CollectionFullPath)
+func (collection *Collection) DeleteCollection(ToBeDeleted bool) {
+	if ToBeDeleted {
+		common.DeleteFolder(common.GetCollectionFolderPath(collection.DatabaseName, collection.CollectionName))
 	}
-	AddIncomingRequest(collection.ParentDBName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
-}
-
-func (collection *Collection) Create(document Document) Document {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	if document["docId"] == nil {
-		document["docId"] = utils.Generate16DigitUUID()
-	}
-
-	var uniqueUuid = document["docId"].(string)
-	documentIndex := collection.LastIndex + 1
-	document["created"] = utils.UuidStringToTimeString(uniqueUuid)
-	document["docIndex"] = documentIndex
-
-	collection.DocumentsMap[uniqueUuid] = document
-
-	collection.DocumentIds = append(collection.DocumentIds, uniqueUuid)
-
-	collection.createIndex(document)
-
-	collection.IsChanged = true
-	collection.LastIndex = documentIndex
-	return document
-}
-
-func (collection *Collection) Read(id string) Document {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
-	return collection.DocumentsMap[id]
-}
-
-func (collection *Collection) Filter(reqFilter MapInterface) []Document {
-	fmt.Printf("\n reqFilter %+v \n", reqFilter)
-
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
-	filters := make([]MapInterface, 0)
-	var limit int = 1000
-
-	for key, value := range reqFilter {
-		temp := make(MapInterface)
-		if key != "limit" {
-			temp["key"] = key
-			temp["value"] = value
-			filters = append(filters, temp)
-		} else {
-			limit = value.(int)
-		}
-	}
-	fmt.Printf("\n filters %+v \n", filters)
-
-	filtersWithoutIndex := make([]MapInterface, 0)
-	filtersWithIndex := make([]MapInterface, 0)
-
-outerLoop:
-	for _, filter := range filters {
-		for _, indexKey := range collection.IndexKeys {
-			if indexKey == filter["key"] {
-				filtersWithIndex = append(filtersWithIndex, filter)
-				continue outerLoop
-			}
-		}
-		filtersWithoutIndex = append(filtersWithoutIndex, filter)
-	}
-
-	var filteredIds DocumentIds
-
-	// if filter have index keys, first filter ids based on
-	if len(filtersWithIndex) > 0 {
-		filteredIds = collection.filterWithIndex(filtersWithIndex)
-	} else {
-		filteredIds = collection.DocumentIds
-	}
-
-	// fmt.Printf("\n Indexing filters count: %d ", len(filtersWithIndex))
-	// fmt.Printf("\n Non-indexing filters count: %d ", len(filtersWithoutIndex))
-	// fmt.Printf("\n Scanning %d documents \n", len(filteredIds))
-
-	filteredIdsLength := len(filteredIds)
-
-	workerCount := 4
-	// Use a WaitGroup to wait for the goroutine to finish
-	var wg sync.WaitGroup
-	wg.Add(workerCount)
-
-	var ResultChannelSize = filteredIdsLength / workerCount
-
-	// Create a channel to communicate results
-	resultChannel := make(chan Document, ResultChannelSize)
-
-	for i := 0; i < workerCount; i++ {
-		start := i * filteredIdsLength / workerCount
-		end := (i + 1) * filteredIdsLength / workerCount
-		go collection.filterWithoutIndex(&wg, resultChannel, filtersWithoutIndex, filteredIds, start, end)
-	}
-
-	// Use another goroutine to close the result channel when the filtering is done
-	go func() {
-		// Close the result channel to signal that no more values will be sent,
-		//then only resultChannel for loop will end, otherwise it will continult wait
-		defer close(resultChannel)
-
-		// Wait for the worker goroutine to finish
-		wg.Wait()
-
-	}()
-
-	var results = make([]Document, 0)
-
-	// Retrieve the results from the channel in a loop
-	for result := range resultChannel {
-		results = append(results, result)
-	}
-
-	sortDocuments(results)
-
-	var limitedResult = make([]Document, 0)
-
-	var lengthOfResult = len(results)
-
-	if len(results) < limit {
-		limit = lengthOfResult
-	}
-
-	for i := 0; i < limit; i++ {
-		limitedResult = append(limitedResult, results[i])
-	}
-
-	return limitedResult
-}
-
-func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChannel chan Document, filter []MapInterface, filteredIds DocumentIds, start int, end int) {
-	defer wg.Done()
-
-	for i := start; i < end; i++ {
-		id := filteredIds[i]
-		var isMatch bool = true
-		document := collection.DocumentsMap[id]
-
-		for _, filter := range filter {
-
-			if value, ok := document[filter["key"].(string)]; ok {
-				filterValue := filter["value"].(string)
-				switch v := value.(type) {
-				case int:
-					// Convert filterValue to int for comparison
-					if filterInt, err := strconv.Atoi(filterValue); err == nil {
-						if v != filterInt {
-							isMatch = false
-							break
-						}
-					} else {
-						// Handle conversion error or invalid filter value
-						isMatch = false
-						break
-					}
-				case string:
-					// Direct string comparison
-					if v != filterValue {
-						isMatch = false
-						break
-					}
-				default:
-					// Handle other types or unsupported types
-					isMatch = false
-				}
-			}
-		}
-
-		if isMatch {
-			resultChannel <- document
-		}
-	}
-}
-
-func (collection *Collection) filterWithIndex(filters []MapInterface) DocumentIds {
-	filteredIndexMap := make(IndexMap)
-
-	for _, filter := range filters {
-		for index, indexIds := range collection.IndexMap {
-			if filter["key"].(string) == index {
-				filteredIndexMap[index] = indexIds
-			}
-		}
-	}
-
-	slices.SortFunc(filters,
-		func(a, b MapInterface) int {
-			keyToSearchA := a["key"].(string)
-			valueToSearchA := a["value"].(string)
-
-			keyToSearchB := b["key"].(string)
-			valueToSearchB := b["value"].(string)
-
-			indexIdsLenA := len(filteredIndexMap[keyToSearchA][valueToSearchA])
-			//20 := len(filteredIndexMap[city][chennai]) chennai - 1000 - users
-			indexIdsLenB := len(filteredIndexMap[keyToSearchB][valueToSearchB])
-			//10 := len(filteredIndexMap[pincode][60100]) 600100 - 20 - users
-			return cmp.Compare(indexIdsLenA, indexIdsLenB)
-		})
-
-	isNotStarted := false
-	resultIdsMap := make(map[string]bool)
-	filteredIds := make([]string, 0)
-
-outerLoop:
-	for _, eachIndexMap := range filters {
-
-		keyToSearch := eachIndexMap["key"].(string)
-		valueToSearch := eachIndexMap["value"].(string)
-
-		if indexMap, exists := filteredIndexMap[keyToSearch]; exists {
-			if idsMap, exists := indexMap[valueToSearch]; exists {
-
-				if !isNotStarted {
-					for eachId := range idsMap {
-						resultIdsMap[eachId] = true
-						filteredIds = append(filteredIds, eachId)
-					}
-					isNotStarted = true
-				} else {
-					tempIdsMap := make(map[string]bool)
-					tempIds := make([]string, 0)
-
-					for eachId := range resultIdsMap {
-						if _, exists := idsMap[eachId]; exists {
-							tempIdsMap[eachId] = true
-							tempIds = append(tempIds, eachId)
-						}
-					}
-
-					if len(tempIdsMap) == 0 {
-						break outerLoop
-					}
-
-					resultIdsMap = tempIdsMap
-					filteredIds = tempIds
-				}
-			}
-		}
-	}
-	return filteredIds
-}
-
-func (collection *Collection) Update(id string, updatedDocument Document) Document {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-	if _, exists := collection.DocumentsMap[id]; !exists {
-		return nil
-	}
-
-	collection.updateIndex(collection.DocumentsMap[id], updatedDocument)
-
-	collection.DocumentsMap[id] = updatedDocument
-
-	collection.IsChanged = true
-	return updatedDocument
-}
-
-func (collection *Collection) Delete(id string) error {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	if document, exists := collection.DocumentsMap[id]; exists {
-		delete(collection.DocumentsMap, id)
-
-		collection.deleteIndex(document)
-	} else {
-		return fmt.Errorf("docId '%s' not found in the collection", id)
-	}
-
-	collection.IsChanged = true
-	return nil
-}
-
-func (collection *Collection) GetIds() []string {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-
-	return collection.DocumentIds
+	AddIncomingRequest(collection.DatabaseName, collection.CollectionName, Event{Type: global_constants.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) GetAllData() []Document {
 	collection.mu.RLock()
 	defer collection.mu.RUnlock()
 
-	documents := make([]Document, 0, len(collection.DocumentsMap))
+	resultDocuments := make([]Document, 0, len(collection.DocumentsMap))
 
-	for _, document := range collection.DocumentsMap {
-		documents = append(documents, document)
+	for _, documents := range collection.DocumentsMap {
+		for _, document := range documents {
+			resultDocuments = append(resultDocuments, document)
+		}
 	}
 
-	return documents
+	return resultDocuments
 }
 
 func (collection *Collection) Clear() {
-	collection.mu.RLock()
-	defer collection.mu.RUnlock()
-	collection.DocumentsMap = make(DocumentsMap)
-	collection.IndexMap = make(IndexMap)
-	collection.IsChanged = true
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
+
+	collection.CollectionName = ""
+	collection.DatabaseName = ""
+	collection.IndexMap = make(IndexMap)         // Reset to an empty map
+	collection.IndexKeys = nil                   // Reset to nil (or make([]string, 0) for an empty slice)
+	collection.DocumentsMap = make(DocumentsMap) // Reset to an empty map
+	collection.LastIndex = 0
+	collection.CurrentBatchId = ""
+	collection.CurrentBatchCount = 0
+	collection.BatchUpdateStatus = make(BatchUpdateStatus) // Reset to an empty map
+	collection.IsChanged = false
 }
 
 func (collection *Collection) Stats() CollectionStats {
@@ -449,9 +167,9 @@ func (collection *Collection) Stats() CollectionStats {
 
 func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["docId"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
+		if indexValue, ok := document[eachIndex]; ok {
+			if id, ok := document[global_constants.DOC_ID]; ok {
+				collection.changeIndex(eachIndex, indexValue.(string), id.(string), false)
 			}
 		}
 	}
@@ -461,7 +179,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 	for _, eachIndex := range collection.IndexKeys {
 		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
 			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
-				var id string = oldDocument["docId"].(string)
+				var id string = oldDocument[global_constants.DOC_ID].(string)
 				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
 				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
 
@@ -472,9 +190,9 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 
 func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["docId"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
+		if indexValue, ok := document[eachIndex]; ok {
+			if id, ok := document[global_constants.DOC_ID]; ok {
+				collection.changeIndex(eachIndex, indexValue.(string), id.(string), true)
 			}
 		}
 	}
@@ -507,60 +225,14 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 	}
 }
 
-func (collection *Collection) SaveCollectionToFile() {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	if !collection.IsChanged {
-		return
-	}
-
-	temp := CollectionFileStruct{
-		CollectionName:     collection.CollectionName,
-		ParentDBName:       collection.ParentDBName,
-		IndexKeys:          collection.IndexKeys,
-		DocumentsMap:       collection.DocumentsMap,
-		DocumentIds:        collection.DocumentIds,
-		IndexMap:           collection.IndexMap,
-		CollectionFileName: collection.CollectionFileName,
-		CollectionFullPath: collection.CollectionFullPath,
-		LastIndex:          collection.LastIndex,
-	}
-	collection.IsChanged = false
-
-	writeCollectionTofileBackground(temp)
-}
-
-func writeCollectionTofileBackground(temp CollectionFileStruct) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("Worker panic recovered: %v. \n", r)
-		}
-	}()
-
-	gobData, err := utils.EncodeGob(temp)
-
-	if err != nil {
-		fmt.Println("GOB encoding error:", err)
-	}
-
-	err = utils.SaveToFile(temp.CollectionFullPath, gobData)
-
-	if err != nil {
-		fmt.Println("Error saving collection GOB to file:", err)
-	}
-
-	fmt.Printf("\n EVENT_SAVE_TO_DISK : GOB data saved to %v \n", temp.CollectionName)
-}
-
 func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
 	var collectionsInput []CollectionInput
 
 	for _, each := range collectionsInterface {
-		if collectionName, ok := each.(map[string]interface{})["CollectionName"].(string); ok {
+		if collectionName, ok := each.(map[string]interface{})[global_constants.COLLECTION_NAME].(string); ok {
 			var indexKeys = make([]string, 0)
 
-			for _, each := range each.(map[string]interface{})["IndexKeys"].([]interface{}) {
+			for _, each := range each.(map[string]interface{})[global_constants.INDEX_KEYS_NAME].([]interface{}) {
 				indexKeys = append(indexKeys, each.(string))
 			}
 
@@ -575,71 +247,54 @@ func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionI
 	return collectionsInput
 }
 
-func ReadCollectionGobFile(filePath string) (CollectionFileStruct, error) {
-	var gobData CollectionFileStruct
+func (collection *Collection) SaveCollectionToFile() {
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
 
-	fileData, err := os.ReadFile(filePath)
-
-	if err != nil {
-		fmt.Printf("\n Collection file %s reading, Error %v", filePath, err)
-		return gobData, err
+	if !collection.IsChanged {
+		return
 	}
 
-	err = utils.DecodeGob(fileData, &gobData)
-
-	if err != nil {
-		fmt.Printf("\n Collection file %s decoding , Error %v", filePath, err)
-
-		return gobData, err
+	temp := CollectionFileStruct{
+		CollectionName:    collection.CollectionName,
+		DatabaseName:      collection.DatabaseName,
+		IndexKeys:         collection.IndexKeys,
+		IndexMap:          collection.IndexMap,
+		LastIndex:         collection.LastIndex,
+		CurrentBatchId:    collection.CurrentBatchId,
+		CurrentBatchCount: collection.CurrentBatchCount,
+		BatchUpdateStatus: collection.BatchUpdateStatus,
 	}
 
-	return gobData, nil
+	collection.IsChanged = false
+
+	// Write collection file to disk
+	collectionGobData, err := common.EncodeGob(temp)
+	if err == nil {
+		var collectionFileName = common.GetCollectionFileName(collection.CollectionName)
+		go common.WriteGobDataToDisk(common.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, collectionFileName), collectionGobData)
+	} else {
+		fmt.Printf("\n collection: %v \t GOB encoding error: %v ", collection.CollectionName, err)
+	}
+
+	// Write Batch file to disk
+	for fileName, isUpdated := range collection.BatchUpdateStatus {
+		if documents, exists := collection.DocumentsMap[fileName]; exists && isUpdated {
+			gobData, err := common.EncodeGob(documents)
+			if err == nil {
+				go common.WriteGobDataToDisk(common.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, fileName), gobData)
+			} else {
+				fmt.Printf("\n collection: %v \t batch filename: %v \t GOB encoding error: %v ", collection.CollectionName, fileName, err)
+			}
+
+		} else {
+			fmt.Printf("\n batchid: %v does not exists in DocumentsMap ", fileName)
+		}
+		collection.BatchUpdateStatus[fileName] = false
+	}
+
 }
 
 func (collection *Collection) StartInternalFunctions() {
-	go collection.EventListener()
-}
-
-func (collection *Collection) EventListener() {
-	var collectionChannelName = collection.ParentDBName + collection.CollectionName
-	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.ParentDBName, collection.CollectionName)
-	for {
-
-		event := <-collectionChannel
-
-		if event.Type == utils.EVENT_CREATE {
-			collection.Create(event.EventData)
-		}
-		if event.Type == utils.EVENT_UPDATE {
-			collection.Update(event.Id, event.EventData)
-		}
-		if event.Type == utils.EVENT_DELETE {
-			collection.Delete(event.Id)
-		}
-		if event.Type == utils.EVENT_SAVE_TO_DISK {
-			collection.SaveCollectionToFile()
-			fmt.Printf("\n EVENT_SAVE_TO_DISK : %v done\n", collectionChannelName)
-		}
-		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
-			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
-			return
-		}
-
-	}
-}
-
-type SortByDocIndex []Document
-
-func (a SortByDocIndex) Len() int      { return len(a) }
-func (a SortByDocIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a SortByDocIndex) Less(i, j int) bool {
-
-	iDocIndex := a[i]["docIndex"].(int)
-	jDocIndex := a[j]["docIndex"].(int)
-
-	return iDocIndex < jDocIndex
-}
-
-func sortDocuments(documents []Document) {
-	sort.Sort(SortByDocIndex(documents))
+	go collection.StartMutationWorker()
 }

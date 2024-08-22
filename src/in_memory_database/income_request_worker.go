@@ -2,6 +2,7 @@ package in_memory_database
 
 import (
 	"fmt"
+	"gnosql/src/global_constants"
 	"time"
 )
 
@@ -11,7 +12,7 @@ type IncomeRequest struct {
 	Event          Event
 }
 
-var IncomeRequestChannel chan IncomeRequest = make(chan IncomeRequest, 100000)
+var IncomeRequestChannel chan IncomeRequest = make(chan IncomeRequest, global_constants.INCOME_REQUEST_CHANNEL_SIZE)
 
 func init() {
 	go InitializeWorker()
