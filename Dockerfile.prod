@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Build the Go server
-RUN go build -o gnosql .
+RUN go build -o gnosql ./cmd
 
 # Set the command to run the server when the container starts
 CMD ["./gnosql"]

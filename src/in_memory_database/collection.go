@@ -2,10 +2,9 @@ package in_memory_database
 
 import (
 	"fmt"
-	"gnosql/src/utils"
-	"os"
+	"gnosql/src/common"
+	"gnosql/src/global_constants"
 	"sync"
-	"time"
 )
 
 type Document map[string]interface{}
@@ -33,11 +32,6 @@ type CollectionStats struct {
 }
 
 type BatchUpdateStatus map[string]bool
-
-const EventChannelSize = 1 * 10 * 100 * 1000
-
-// const TimerToSaveToDisk = 1 * time.Minute
-const TimerToSaveToDisk = 30 * time.Second
 
 type Collection struct {
 	CollectionName    string            `json:"CollectionName"`
@@ -74,7 +68,7 @@ type CollectionInput struct {
 }
 
 func CreateCollection(collectionInput CollectionInput, db *Database) *Collection {
-	currentBatchId := utils.GetCollectionBatchIdFileName()
+	currentBatchId := common.GetCollectionBatchIdFileName()
 
 	collection :=
 		&Collection{
@@ -115,7 +109,7 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 			mu:                sync.RWMutex{},
 		}
 
-		collection.StartInternalFunctions()
+		go collection.StartInternalFunctions()
 		collections = append(collections, collection)
 	}
 	return collections
@@ -123,9 +117,9 @@ func LoadCollections(collectionsGob []CollectionFileStruct) []*Collection {
 
 func (collection *Collection) DeleteCollection(ToBeDeleted bool) {
 	if ToBeDeleted {
-		utils.DeleteFolder(utils.GetCollectionFolderPath(collection.DatabaseName, collection.CollectionName))
+		common.DeleteFolder(common.GetCollectionFolderPath(collection.DatabaseName, collection.CollectionName))
 	}
-	AddIncomingRequest(collection.DatabaseName, collection.CollectionName, Event{Type: utils.EVENT_STOP_GO_ROUTINE})
+	AddIncomingRequest(collection.DatabaseName, collection.CollectionName, Event{Type: global_constants.EVENT_STOP_GO_ROUTINE})
 }
 
 func (collection *Collection) GetAllData() []Document {
@@ -173,9 +167,9 @@ func (collection *Collection) Stats() CollectionStats {
 
 func (collection *Collection) createIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["docId"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), false)
+		if indexValue, ok := document[eachIndex]; ok {
+			if id, ok := document[global_constants.DOC_ID]; ok {
+				collection.changeIndex(eachIndex, indexValue.(string), id.(string), false)
 			}
 		}
 	}
@@ -185,7 +179,7 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 	for _, eachIndex := range collection.IndexKeys {
 		if oldIndexValue, ok := oldDocument[eachIndex]; ok {
 			if newIndexValue, ok := updatedDocument[eachIndex]; ok {
-				var id string = oldDocument["docId"].(string)
+				var id string = oldDocument[global_constants.DOC_ID].(string)
 				collection.changeIndex(eachIndex, oldIndexValue.(string), id, true)
 				collection.changeIndex(eachIndex, newIndexValue.(string), id, false)
 
@@ -196,9 +190,9 @@ func (collection *Collection) updateIndex(oldDocument Document, updatedDocument 
 
 func (collection *Collection) deleteIndex(document Document) {
 	for _, eachIndex := range collection.IndexKeys {
-		if indexName, ok := document[eachIndex]; ok {
-			if id, ok := document["docId"]; ok {
-				collection.changeIndex(eachIndex, indexName.(string), id.(string), true)
+		if indexValue, ok := document[eachIndex]; ok {
+			if id, ok := document[global_constants.DOC_ID]; ok {
+				collection.changeIndex(eachIndex, indexValue.(string), id.(string), true)
 			}
 		}
 	}
@@ -231,6 +225,28 @@ func (collection *Collection) changeIndex(indexKey string, indexValue string, id
 	}
 }
 
+func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
+	var collectionsInput []CollectionInput
+
+	for _, each := range collectionsInterface {
+		if collectionName, ok := each.(map[string]interface{})[global_constants.COLLECTION_NAME].(string); ok {
+			var indexKeys = make([]string, 0)
+
+			for _, each := range each.(map[string]interface{})[global_constants.INDEX_KEYS_NAME].([]interface{}) {
+				indexKeys = append(indexKeys, each.(string))
+			}
+
+			collectionInput := CollectionInput{
+				CollectionName: collectionName,
+				IndexKeys:      indexKeys,
+			}
+
+			collectionsInput = append(collectionsInput, collectionInput)
+		}
+	}
+	return collectionsInput
+}
+
 func (collection *Collection) SaveCollectionToFile() {
 	collection.mu.Lock()
 	defer collection.mu.Unlock()
@@ -252,12 +268,21 @@ func (collection *Collection) SaveCollectionToFile() {
 
 	collection.IsChanged = false
 
+	// Write collection file to disk
+	collectionGobData, err := common.EncodeGob(temp)
+	if err == nil {
+		var collectionFileName = common.GetCollectionFileName(collection.CollectionName)
+		go common.WriteGobDataToDisk(common.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, collectionFileName), collectionGobData)
+	} else {
+		fmt.Printf("\n collection: %v \t GOB encoding error: %v ", collection.CollectionName, err)
+	}
+
+	// Write Batch file to disk
 	for fileName, isUpdated := range collection.BatchUpdateStatus {
 		if documents, exists := collection.DocumentsMap[fileName]; exists && isUpdated {
-			gobData, err := utils.EncodeGob(documents)
-
+			gobData, err := common.EncodeGob(documents)
 			if err == nil {
-				go writeGobDataToDisk(utils.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, fileName), gobData)
+				go common.WriteGobDataToDisk(common.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, fileName), gobData)
 			} else {
 				fmt.Printf("\n collection: %v \t batch filename: %v \t GOB encoding error: %v ", collection.CollectionName, fileName, err)
 			}
@@ -265,96 +290,11 @@ func (collection *Collection) SaveCollectionToFile() {
 		} else {
 			fmt.Printf("\n batchid: %v does not exists in DocumentsMap ", fileName)
 		}
+		collection.BatchUpdateStatus[fileName] = false
 	}
 
-	collectionGobData, err := utils.EncodeGob(temp)
-	if err == nil {
-		go writeGobDataToDisk(utils.GetCollectionFilePath(collection.DatabaseName, collection.CollectionName, utils.GetCollectionFileName(collection.CollectionName)), collectionGobData)
-	} else {
-		fmt.Printf("\n collection: %v \t GOB encoding error: %v ", collection.CollectionName, err)
-	}
-}
-
-func writeGobDataToDisk(filePath string, data []byte) {
-	err := utils.SaveToFile(filePath, data)
-
-	if err != nil {
-		fmt.Printf("\n filePath: %v Error saving collection GOB to file:", err)
-	}
-}
-
-func ConvertToCollectionInputs(collectionsInterface []interface{}) []CollectionInput {
-	var collectionsInput []CollectionInput
-
-	for _, each := range collectionsInterface {
-		if collectionName, ok := each.(map[string]interface{})["CollectionName"].(string); ok {
-			var indexKeys = make([]string, 0)
-
-			for _, each := range each.(map[string]interface{})["IndexKeys"].([]interface{}) {
-				indexKeys = append(indexKeys, each.(string))
-			}
-
-			collectionInput := CollectionInput{
-				CollectionName: collectionName,
-				IndexKeys:      indexKeys,
-			}
-
-			collectionsInput = append(collectionsInput, collectionInput)
-		}
-	}
-	return collectionsInput
-}
-
-func ReadAndDecodeFile[T any](filePath string) (T, error) {
-	var data T
-
-	fileData, err := os.ReadFile(filePath)
-
-	if err != nil {
-		fmt.Printf("\n Reading file %s, Error %v", filePath, err)
-		return data, err
-	}
-
-	err = utils.DecodeGob(fileData, &data)
-
-	if err != nil {
-		fmt.Printf("\n Decoding file %s, Error %v", filePath, err)
-
-		return data, err
-	}
-
-	return data, nil
 }
 
 func (collection *Collection) StartInternalFunctions() {
-	go collection.EventListener()
-}
-
-func (collection *Collection) EventListener() {
-	var collectionChannelName = collection.DatabaseName + collection.CollectionName
-	var collectionChannel = CollectionChannelInstance.GetCollectionChannelWithLock(collection.DatabaseName, collection.CollectionName)
-	for {
-
-		event := <-collectionChannel
-
-		if event.Type == utils.EVENT_CREATE {
-			collection.Create(event.EventData)
-		}
-		if event.Type == utils.EVENT_UPDATE {
-			collection.Update(event.Id, event.EventData)
-		}
-		if event.Type == utils.EVENT_DELETE {
-			collection.Delete(event.Id)
-		}
-		if event.Type == utils.EVENT_SAVE_TO_DISK {
-			collection.SaveCollectionToFile()
-			fmt.Printf("\n EVENT_SAVE_TO_DISK : %v done\n", collectionChannelName)
-		}
-		if event.Type == utils.EVENT_STOP_GO_ROUTINE {
-			collection.Clear()
-			fmt.Printf("\n %v Event channel closed. Exiting the goroutine. ", collection.CollectionName)
-			return
-		}
-
-	}
+	go collection.StartMutationWorker()
 }

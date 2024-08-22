@@ -2,50 +2,12 @@ package in_memory_database
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
-	"gnosql/src/utils"
+	"gnosql/src/global_constants"
 	"slices"
 	"sort"
 	"sync"
 )
-
-func (collection *Collection) Create(document Document) Document {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	if document["docId"] == nil {
-		document["docId"] = utils.Generate16DigitUUID()
-	}
-
-	var uniqueUuid = document["docId"].(string)
-	documentIndex := collection.LastIndex + 1
-	document["created"] = utils.UuidStringToTimeString(uniqueUuid)
-	document["docIndex"] = documentIndex
-
-	var batchId = collection.CurrentBatchId
-	var batchCount = collection.CurrentBatchCount + 1
-
-	if batchCount > utils.MaximumLengthNoOfDocuments {
-		batchId = utils.GetCollectionBatchIdFileName()
-		collection.CurrentBatchId = batchId
-		batchCount = 0
-	}
-
-	if _, exists := collection.DocumentsMap[batchId]; !exists {
-		collection.DocumentsMap[batchId] = make(BatchDocuments)
-	}
-
-	collection.DocumentsMap[batchId][uniqueUuid] = document
-
-	collection.createIndex(document)
-
-	collection.IsChanged = true
-	collection.BatchUpdateStatus[batchId] = true
-	collection.LastIndex = documentIndex
-	collection.CurrentBatchCount = batchCount
-	return document
-}
 
 func (collection *Collection) Read(id string) Document {
 	collection.mu.RLock()
@@ -60,13 +22,13 @@ func (collection *Collection) Filter(reqFilter MapInterface) []Document {
 	defer collection.mu.RUnlock()
 
 	filters := make([]MapInterface, 0)
-	var limit int = 1000
+	var limit int = global_constants.FILTER_DEFAULT_LIMIT
 
 	for key, value := range reqFilter {
 		temp := make(MapInterface)
-		if key != "limit" {
-			temp["key"] = key
-			temp["value"] = value
+		if key != global_constants.FILTER_LIMIT {
+			temp[global_constants.FILTER_KEY] = key
+			temp[global_constants.FILTER_VALUE] = value
 			filters = append(filters, temp)
 		} else {
 			limit = value.(int)
@@ -81,7 +43,7 @@ outerLoop:
 	// constructing IndexFilterKeys and Non-IndexFilterKeys
 	for _, filter := range filters {
 		for _, indexKey := range collection.IndexKeys {
-			if indexKey == filter["key"] {
+			if indexKey == filter[global_constants.FILTER_KEY] {
 				filtersWithIndex = append(filtersWithIndex, filter)
 				continue outerLoop
 			}
@@ -102,7 +64,8 @@ outerLoop:
 
 	filteredDocIdsLength := len(filteredDocIds)
 
-	workerCount := 4
+	workerCount := global_constants.FILTER_DEFAULT_WORKER_COUNT
+
 	// Use a WaitGroup to wait for the goroutine to finish
 	var wg sync.WaitGroup
 	wg.Add(workerCount)
@@ -208,10 +171,10 @@ func (collection *Collection) filterWithoutIndex(wg *sync.WaitGroup, resultChann
 
 func IsMatchWithDocument(filters []MapInterface, document Document) bool {
 	for _, filter := range filters {
-		if value, ok := document[filter["key"].(string)]; ok {
-			// Convert both value and filter["value"] to strings for comparison
-			documentValueStr := fmt.Sprintf("%v", value)
-			filterValueStr := fmt.Sprintf("%v", filter["value"])
+		if valueFromDoc, ok := document[filter[global_constants.FILTER_KEY].(string)]; ok {
+			// Convert both value and filter["key"] to strings for comparison
+			documentValueStr := fmt.Sprintf("%v", valueFromDoc)
+			filterValueStr := fmt.Sprintf("%v", filter[global_constants.FILTER_VALUE])
 
 			if documentValueStr != filterValueStr {
 				return false
@@ -229,7 +192,7 @@ func (collection *Collection) GetfilteredIdsWithIndexkeys(filters []MapInterface
 
 	for _, filter := range filters {
 		for index, indexIds := range collection.IndexMap {
-			if filter["key"].(string) == index {
+			if filter[global_constants.FILTER_KEY].(string) == index {
 				filteredIndexMap[index] = indexIds
 			}
 		}
@@ -238,11 +201,11 @@ func (collection *Collection) GetfilteredIdsWithIndexkeys(filters []MapInterface
 	// Sorting index filters, using this it will fetch and query small no of records filters
 	slices.SortFunc(filters,
 		func(a, b MapInterface) int {
-			keyToSearchA := a["key"].(string)
-			valueToSearchA := a["value"].(string)
+			keyToSearchA := a[global_constants.FILTER_KEY].(string)
+			valueToSearchA := a[global_constants.FILTER_VALUE].(string)
 
-			keyToSearchB := b["key"].(string)
-			valueToSearchB := b["value"].(string)
+			keyToSearchB := b[global_constants.FILTER_KEY].(string)
+			valueToSearchB := b[global_constants.FILTER_VALUE].(string)
 
 			indexIdsLenA := len(filteredIndexMap[keyToSearchA][valueToSearchA])
 			//20 := len(filteredIndexMap[city][chennai]) chennai - 1000 - users
@@ -258,8 +221,8 @@ func (collection *Collection) GetfilteredIdsWithIndexkeys(filters []MapInterface
 outerLoop:
 	for _, eachIndexMap := range filters {
 
-		keyToSearch := eachIndexMap["key"].(string)
-		valueToSearch := eachIndexMap["value"].(string)
+		keyToSearch := eachIndexMap[global_constants.FILTER_KEY].(string)
+		valueToSearch := eachIndexMap[global_constants.FILTER_VALUE].(string)
 
 		if indexMap, exists := filteredIndexMap[keyToSearch]; exists {
 			if idsMap, exists := indexMap[valueToSearch]; exists {
@@ -294,44 +257,6 @@ outerLoop:
 	return filteredIds
 }
 
-func (collection *Collection) Update(id string, updatedDocument Document) error {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	var exists, batchId, document = collection.isDocumentExists(id)
-
-	if !exists {
-		return errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
-	}
-
-	collection.updateIndex(document, updatedDocument)
-
-	collection.DocumentsMap[batchId][id] = updatedDocument
-
-	collection.IsChanged = true
-	collection.BatchUpdateStatus[batchId] = true
-
-	return nil
-}
-
-func (collection *Collection) Delete(id string) error {
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	var exists, batchId, document = collection.isDocumentExists(id)
-
-	if !exists {
-		return errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
-	}
-
-	delete(collection.DocumentsMap[batchId], id)
-	collection.deleteIndex(document)
-
-	collection.IsChanged = true
-	collection.BatchUpdateStatus[batchId] = true
-
-	return nil
-}
 func (collection *Collection) isDocumentExists(id string) (bool, string, Document) {
 	var document Document
 	var batchId string
@@ -344,7 +269,7 @@ func (collection *Collection) isDocumentExists(id string) (bool, string, Documen
 		}
 	}
 
-	if _, exists := document["docId"]; !exists {
+	if _, exists := document[global_constants.DOC_ID]; !exists {
 		return false, batchId, document
 	}
 
@@ -357,8 +282,8 @@ func (a SortByDocIndex) Len() int      { return len(a) }
 func (a SortByDocIndex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a SortByDocIndex) Less(i, j int) bool {
 
-	iDocIndex := a[i]["docIndex"].(int)
-	jDocIndex := a[j]["docIndex"].(int)
+	iDocIndex := a[i][global_constants.DOC_INDEX].(int)
+	jDocIndex := a[j][global_constants.DOC_INDEX].(int)
 
 	return iDocIndex < jDocIndex
 }

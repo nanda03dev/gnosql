@@ -2,7 +2,7 @@ package in_memory_database
 
 import (
 	"fmt"
-	"gnosql/src/utils"
+	"gnosql/src/common"
 	"os"
 )
 
@@ -29,7 +29,8 @@ func CreateDatabase(databaseName string, collectionsInput []CollectionInput) *Da
 		Config:       Config,
 	}
 
-	utils.CreateFolder(utils.GetDatabaseFolderPath(databaseName))
+	common.CreateFolder(common.GetDatabaseFolderPath(databaseName))
+
 	db.SaveDatabaseToFile()
 	db.CreateColls(collectionsInput)
 
@@ -45,7 +46,7 @@ func LoadDatabase(database DatabaseFileStruct) *Database {
 }
 
 func (db *Database) DeleteDatabase() {
-	utils.DeleteFolder(utils.GetDatabaseFolderPath(db.DatabaseName))
+	common.DeleteFolder(common.GetDatabaseFolderPath(db.DatabaseName))
 	for _, collection := range db.Collections {
 		collection.DeleteCollection(false)
 	}
@@ -116,13 +117,13 @@ func (db *Database) SaveDatabaseToFile() {
 		Config:       db.Config,
 	}
 
-	gobData, err := utils.EncodeGob(temp)
+	gobData, err := common.EncodeGob(temp)
 
 	if err != nil {
 		fmt.Println("GOB encoding error:", err)
 	}
 
-	err = utils.SaveToFile(utils.GetDatabaseFilePath(db.DatabaseName, utils.GetDatabaseFileName(db.DatabaseName)), gobData)
+	err = common.SaveToFile(common.GetDatabaseFilePath(db.DatabaseName, common.GetDatabaseFileName(db.DatabaseName)), gobData)
 
 	if err != nil {
 		fmt.Println("Error saving database GOB to file:", err)
@@ -141,7 +142,7 @@ func ReadDatabaseGobFile(filePath string) (DatabaseFileStruct, error) {
 		return gobData, err
 	}
 
-	err = utils.DecodeGob(fileData, &gobData)
+	err = common.DecodeGob(fileData, &gobData)
 
 	if err != nil {
 		fmt.Printf("\n Datebase file %s decoding , Error %v", filePath, err)

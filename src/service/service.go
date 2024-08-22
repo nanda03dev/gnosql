@@ -2,8 +2,9 @@ package service
 
 import (
 	"errors"
+	"gnosql/src/common"
+	"gnosql/src/global_constants"
 	"gnosql/src/in_memory_database"
-	"gnosql/src/utils"
 )
 
 func ConnectDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, collectionsInput []in_memory_database.CollectionInput) in_memory_database.DatabaseConnectResult {
@@ -36,7 +37,7 @@ func CreateDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, coll
 
 	gnoSQL.CreateDB(DatabaseName, collectionsInput)
 
-	result.Data = utils.DATABASE_CREATE_SUCCESS_MSG
+	result.Data = global_constants.DATABASE_CREATE_SUCCESS_MSG
 
 	return result, nil
 }
@@ -52,7 +53,7 @@ func DeleteDatabase(gnoSQL *in_memory_database.GnoSQL, DatabaseName string) (in_
 
 	gnoSQL.DeleteDB(db)
 
-	result.Data = utils.DATABASE_DELETE_SUCCESS_MSG
+	result.Data = global_constants.DATABASE_DELETE_SUCCESS_MSG
 
 	return result, nil
 }
@@ -76,7 +77,7 @@ func LoadToDisk(gnoSQL *in_memory_database.GnoSQL) (in_memory_database.DatabaseL
 
 	go gnoSQL.WriteAllDBs()
 
-	result.Data = utils.DATABASE_LOAD_TO_DISK_MSG
+	result.Data = global_constants.DATABASE_LOAD_TO_DISK_MSG
 	return result, nil
 }
 
@@ -91,7 +92,7 @@ func CreateCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, c
 
 	db.CreateColls(collectionsInput)
 
-	result.Data = utils.COLLECTION_CREATE_SUCCESS_MSG
+	result.Data = global_constants.COLLECTION_CREATE_SUCCESS_MSG
 
 	return result, nil
 }
@@ -107,7 +108,7 @@ func DeleteCollections(gnoSQL *in_memory_database.GnoSQL, DatabaseName string, c
 
 	db.DeleteColls(collections)
 
-	result.Data = utils.COLLECTION_DELETE_SUCCESS_MSG
+	result.Data = global_constants.COLLECTION_DELETE_SUCCESS_MSG
 
 	return result, nil
 }
@@ -161,7 +162,7 @@ func DocumentCreate(gnoSQL *in_memory_database.GnoSQL,
 	}
 
 	if document["docId"] == nil {
-		document["docId"] = utils.Generate16DigitUUID()
+		document["docId"] = common.Generate16DigitUUID()
 	}
 
 	var createEvent in_memory_database.Event = GenerateCreateEvent(document)
@@ -187,7 +188,7 @@ func DocumentRead(gnoSQL *in_memory_database.GnoSQL,
 	existingDocument := collection.Read(id)
 
 	if existingDocument == nil {
-		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
+		return result, errors.New(global_constants.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	result.Data = existingDocument
@@ -227,7 +228,7 @@ func DocumentUpdate(gnoSQL *in_memory_database.GnoSQL,
 
 	existingDocument := collection.Read(id)
 	if existingDocument == nil {
-		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
+		return result, errors.New(global_constants.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	for key, value := range document {
@@ -257,14 +258,14 @@ func DocumentDelete(gnoSQL *in_memory_database.GnoSQL,
 	existingDocument := collection.Read(id)
 
 	if existingDocument == nil {
-		return result, errors.New(utils.DOCUMENT_NOT_FOUND_MSG)
+		return result, errors.New(global_constants.DOCUMENT_NOT_FOUND_MSG)
 	}
 
 	var deleteEvent in_memory_database.Event = GenerateDeleteEvent(id)
 
 	go in_memory_database.AddIncomingRequest(db.DatabaseName, collection.CollectionName, deleteEvent)
 
-	result.Data = utils.DOCUMENT_DELETE_SUCCESS_MSG
+	result.Data = global_constants.DOCUMENT_DELETE_SUCCESS_MSG
 
 	return result, nil
 }
@@ -290,7 +291,7 @@ func DocumentGetAll(gnoSQL *in_memory_database.GnoSQL,
 // validateDatabase checks if db is nil, returns an error if it is
 func validateDatabase(db *in_memory_database.Database) error {
 	if db == nil {
-		return errors.New(utils.DATABASE_NOT_FOUND_MSG)
+		return errors.New(global_constants.DATABASE_NOT_FOUND_MSG)
 	}
 	return nil
 }
@@ -298,7 +299,7 @@ func validateDatabase(db *in_memory_database.Database) error {
 // validateCollection checks if collection is nil, returns an error if it is
 func validateCollection(collection *in_memory_database.Collection) error {
 	if collection == nil {
-		return errors.New(utils.COLLECTION_NOT_FOUND_MSG)
+		return errors.New(global_constants.COLLECTION_NOT_FOUND_MSG)
 	}
 	return nil
 }
@@ -319,7 +320,7 @@ func GenerateCreateEvent(document in_memory_database.Document) in_memory_databas
 	}
 
 	return in_memory_database.Event{
-		Type:      utils.EVENT_CREATE,
+		Type:      global_constants.EVENT_CREATE,
 		EventData: EventDocument,
 	}
 }
@@ -334,7 +335,7 @@ func GenerateUpdateEvent(document in_memory_database.Document) in_memory_databas
 
 	return in_memory_database.Event{
 		Id:        id.(string),
-		Type:      utils.EVENT_UPDATE,
+		Type:      global_constants.EVENT_UPDATE,
 		EventData: EventDocument,
 	}
 }
@@ -342,6 +343,6 @@ func GenerateUpdateEvent(document in_memory_database.Document) in_memory_databas
 func GenerateDeleteEvent(id string) in_memory_database.Event {
 	return in_memory_database.Event{
 		Id:   id,
-		Type: utils.EVENT_DELETE,
+		Type: global_constants.EVENT_DELETE,
 	}
 }
