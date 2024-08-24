@@ -11,12 +11,13 @@ import (
 )
 
 // @Summary      Create new database
-// @Description  To create new database
+// @Description  To create a new database
 // @Tags         database
+// @Accept       json
 // @Produce      json
-// @Param        database  body in_memory_database.DatabaseCreateRequest  true  "Database"
-// @Success      200 "database created successfully"
-// @Success      400 "Database already exists"
+// @Param        requestBody  body  in_memory_database.DatabaseCreateRequest  true  "Database creation request containing databaseName and collections"
+// @Success      200  {object}  in_memory_database.DatabaseCreateResult  "Database created successfully"
+// @Failure      400  {object}  map[string]string  "Database already exists or error while binding JSON"
 // @Router       /database/add [post]
 func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
@@ -32,12 +33,13 @@ func CreateDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Connect to database
-// @Description  Connect database
+// @Description  Connect to an existing database
 // @Tags         database
+// @Accept       json
 // @Produce      json
-// @Param        database  body in_memory_database.DatabaseCreateRequest  true  "Database"
-// @Success      200 in_memory_database.DatabaseConnectResult
-// @Success      400 "Something went wrong"
+// @Param        requestBody  body in_memory_database.DatabaseCreateRequest true "databaseName, collections"
+// @Success      200  {object}  in_memory_database.DatabaseConnectResult  "Connected successfully"
+// @Failure      400  {object}  map[string]string  "Something went wrong or error while binding JSON"
 // @Router       /database/connect [post]
 func ConnectDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseCreateRequest
@@ -53,12 +55,13 @@ func ConnectDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Delete database
-// @Description  To delete database
+// @Description  To delete a database
 // @Tags         database
+// @Accept       json
 // @Produce      json
-// @Param        database  body router.DatabaseRequestInput  true  "Database"
-// @Success      200 "database deleted successfully"
-// @Success      400 "Unexpected error while delete database"
+// @Param        requestBody  body  in_memory_database.DatabaseDeleteRequest true "databaseName"
+// @Success      200  {object}  in_memory_database.DatabaseDeleteResult  "Database deleted successfully"
+// @Failure      400  {object}  map[string]string  "Unexpected error while deleting database or error while binding JSON"
 // @Router       /database/delete [post]
 func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DatabaseDeleteRequest
@@ -73,11 +76,12 @@ func DeleteDatabase(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	c.JSON(GetResponse(result, err))
 }
 
-// @Summary      Get all database
-// @Description  To get all database.
+// @Summary      Get all databases
+// @Description  Retrieve a list of all databases
 // @Tags         database
 // @Produce      json
-// @Success      200 {array} string
+// @Success      200  {array}  in_memory_database.DatabaseGetAllResult  "List of all databases"
+// @Failure      500  {object}  map[string]string  "Internal server error"
 // @Router       /database/get-all [get]
 func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	result, err := service.GetAllDatabase(gnoSQL)
@@ -85,10 +89,11 @@ func GetAllDatabases(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Load database to disk
-// @Description  Load database to disk.
+// @Description  Load database to disk for persistence
 // @Tags         database
 // @Produce      json
-// @Success      200 {array} string
+// @Success      200  {object}  map[string]string  "Database loaded to disk successfully"
+// @Failure      500  {object}  map[string]string  "Error loading database to disk"
 // @Router       /database/load-to-disk [get]
 func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	result, err := service.LoadToDisk(gnoSQL)
@@ -97,14 +102,14 @@ func LoadDatabaseToDisk(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Create new collection
-// @Description  To create new collection.
+// @Description  To create a new collection in a specific database
 // @Tags         collection
+// @Accept       json
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collection  body in_memory_database.CollectionInput  true  "Collection"
-// @Success      200 "collection created successfully"
-// @Success      400 "collection already exists"
-// @Router       /collection/{databaseName}/add [post]
+// @Param        requestBody  body in_memory_database.CollectionCreateRequest true "databaseName, collections"
+// @Success      200  {object}  in_memory_database.CollectionCreateResult  "Collection created successfully"
+// @Failure      400  {object}  map[string]string  "Collection already exists or error while binding JSON"
+// @Router       /collection/add [post]
 func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionCreateRequest
 
@@ -119,16 +124,15 @@ func CreateCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Delete collection
-// @Description  To delete collection
+// @Description  To delete a collection from a specific database
 // @Tags         collection
+// @Accept       json
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collection  body router.DatabaseRequestInput  true  "collection"
-// @Success      200 "collection deleted successfully"
-// @Success      400 "Unexpected error while delete collection"
-// @Router       /collection/{databaseName}/delete [post]
+// @Param        requestBody  body  in_memory_database.CollectionDeleteRequest true  "databaseName, collections"
+// @Success      200  {object}  in_memory_database.CollectionDeleteResult  "Collection deleted successfully"
+// @Failure      400  {object}  map[string]string  "Unexpected error while deleting collection or error while binding JSON"
+// @Router       /collection/delete [post]
 func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-
 	var requestBody in_memory_database.CollectionDeleteRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
@@ -142,12 +146,13 @@ func DeleteCollection(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Get all collections
-// @Description  To get all collections
+// @Description  Retrieve all collections from a specific database
 // @Tags         collection
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Success      200 {array} string
-// @Router       /collection/{databaseName}/get-all [get]
+// @Param        requestBody  body  in_memory_database.CollectionGetAllRequest true "databaseName"
+// @Success      200  {array}   in_memory_database.CollectionGetAllResult  "List of all collections"
+// @Failure      400  {object}  map[string]string  "Error while fetching collections or invalid database"
+// @Router       /collection/get-all [post]
 func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.CollectionGetAllRequest
 
@@ -162,16 +167,14 @@ func GetAllCollections(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 }
 
 // @Summary      Collection stats
-// @Description  Collection stats
+// @Description  Retrieve statistics for a specific collection in a database
 // @Tags         collection
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Success      200 {object}  in_memory_database.IndexMap
-// @Success   	 400 "Database/Collection deleted"
-// @Router       /collection/{databaseName}/{collectionName}/stats [get]
+// @Param        requestBody  body  in_memory_database.CollectionStatsRequest true "databaseName, collectionName"
+// @Success      200  {object}  in_memory_database.IndexMap  "Collection statistics"
+// @Failure      400  {object}  map[string]string  "Database or Collection not found or deleted"
+// @Router       /collection/stats [post]
 func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
-
 	var requestBody in_memory_database.CollectionStatsRequest
 
 	if err := c.BindJSON(&requestBody); err != nil {
@@ -182,19 +185,16 @@ func CollectionStats(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	result, err := service.GetCollectionStats(gnoSQL, requestBody.DatabaseName, requestBody.CollectionName)
 
 	c.JSON(GetResponse(result, err))
-
 }
 
 // @Summary      Create new document
 // @Description  To create new document
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        document  body in_memory_database.Document  true  "Document"
+// @Param        requestBody  body  in_memory_database.DocumentCreateRequest true  "databaseName, collectionName"
 // @Success      200 "Document created successfully"
 // @Success      400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/ [post]
+// @Router       /document/add [post]
 func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 
 	var requestBody in_memory_database.DocumentCreateRequest
@@ -213,12 +213,10 @@ func CreateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Description  Read document by id.
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        id  path      string  true  "search document by id"
+// @Param        requestBody  body  in_memory_database.DocumentReadRequest true "databaseName, collectionName, docId"
 // @Success      200 {object}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/{id} [get]
+// @Router       /document/{id} [get]
 func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentReadRequest
 
@@ -236,12 +234,10 @@ func ReadDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Description  Filter document
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        document body in_memory_database.MapInterface  true  "MapInterface"
+// @Param        requestBody  body   in_memory_database.DocumentFilterRequest true "databaseName, collectionName, filter"
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/filter [post]
+// @Router       /document/filter [post]
 func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentFilterRequest
 
@@ -259,13 +255,10 @@ func FilterDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Description  To update document
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        id  path      string  true  "update document by id"
-// @Param        document  body in_memory_database.Document  true  "Document"
+// @Param        requestBody  body  in_memory_database.DocumentUpdateRequest true "databaseName, collectionName, docId, document"
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/{id} [put]
+// @Router       /document/{id} [post]
 func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentUpdateRequest
 
@@ -283,12 +276,10 @@ func UpdateDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Description  To delete document
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
-// @Param        id  path      string  true  "delete document by id"
+// @Param        requestBody  body  in_memory_database.DocumentDeleteRequest true "databaseName, collectionName, docId"
 // @Success      200 {object} in_memory_database.Document
 // @Success      400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/{id} [delete]
+// @Router       /document/{id} [post]
 func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentDeleteRequest
 
@@ -306,11 +297,10 @@ func DeleteDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 // @Description  Read all document
 // @Tags         document
 // @Produce      json
-// @Param        databaseName  path      string  true  "databaseName"
-// @Param        collectionName  path      string  true  "collectionName"
+// @Param        requestBody  body   in_memory_database.DocumentGetAllRequest true "databaseName, collectionName"
 // @Success      200 {array}  in_memory_database.Document
 // @Success   	 400 "Database/Collection deleted"
-// @Router       /document/{databaseName}/{collectionName}/all-data [get]
+// @Router       /document/all-data [post]
 func ReadAllDocument(c *gin.Context, gnoSQL *in_memory_database.GnoSQL) {
 	var requestBody in_memory_database.DocumentGetAllRequest
 

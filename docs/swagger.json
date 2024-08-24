@@ -6,7 +6,7 @@
         "contact": {
             "name": "Nanda Kumar",
             "url": "https://twitter.com/nanda0311",
-            "email": "nanda23311@gmail.com"
+            "email": "nanda03dev@gmail.com"
         },
         "license": {
             "name": "Apache 2.0",
@@ -17,9 +17,12 @@
     "host": "localhost:5454",
     "basePath": "/api/v1",
     "paths": {
-        "/collection/{databaseName}/add": {
+        "/collection/add": {
             "post": {
-                "description": "To create new collection.",
+                "description": "To create a new collection in a specific database",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -29,35 +32,40 @@
                 "summary": "Create new collection",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Collection",
-                        "name": "collection",
+                        "description": "databaseName, collections",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.CollectionInput"
+                            "$ref": "#/definitions/in_memory_database.CollectionCreateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "collection created successfully"
+                        "description": "Collection created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.CollectionCreateResult"
+                        }
                     },
                     "400": {
-                        "description": "collection already exists"
+                        "description": "Collection already exists or error while binding JSON",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
-        "/collection/{databaseName}/delete": {
+        "/collection/delete": {
             "post": {
-                "description": "To delete collection",
+                "description": "To delete a collection from a specific database",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -67,35 +75,37 @@
                 "summary": "Delete collection",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "collection",
-                        "name": "collection",
+                        "description": "databaseName, collections",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                            "$ref": "#/definitions/in_memory_database.CollectionDeleteRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "collection deleted successfully"
+                        "description": "Collection deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.CollectionDeleteResult"
+                        }
                     },
                     "400": {
-                        "description": "Unexpected error while delete collection"
+                        "description": "Unexpected error while deleting collection or error while binding JSON",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
-        "/collection/{databaseName}/get-all": {
-            "get": {
-                "description": "To get all collections",
+        "/collection/get-all": {
+            "post": {
+                "description": "Retrieve all collections from a specific database",
                 "produces": [
                     "application/json"
                 ],
@@ -105,19 +115,30 @@
                 "summary": "Get all collections",
                 "parameters": [
                     {
-                        "type": "string",
                         "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
+                        "name": "requestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.CollectionGetAllRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "List of all collections",
                         "schema": {
                             "type": "array",
                             "items": {
+                                "$ref": "#/definitions/in_memory_database.CollectionGetAllResult"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Error while fetching collections or invalid database",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "type": "string"
                             }
                         }
@@ -125,9 +146,9 @@
                 }
             }
         },
-        "/collection/{databaseName}/{collectionName}/stats": {
-            "get": {
-                "description": "Collection stats",
+        "/collection/stats": {
+            "post": {
+                "description": "Retrieve statistics for a specific collection in a database",
                 "produces": [
                     "application/json"
                 ],
@@ -137,36 +158,40 @@
                 "summary": "Collection stats",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
+                        "description": "databaseName, collectionName",
+                        "name": "requestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.CollectionStatsRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Collection statistics",
                         "schema": {
                             "$ref": "#/definitions/in_memory_database.IndexMap"
                         }
                     },
                     "400": {
-                        "description": "Database/Collection deleted"
+                        "description": "Database or Collection not found or deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/database/add": {
             "post": {
-                "description": "To create new database",
+                "description": "To create a new database",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -176,28 +201,83 @@
                 "summary": "Create new database",
                 "parameters": [
                     {
-                        "description": "Database",
-                        "name": "database",
+                        "description": "Database creation request containing databaseName and collections",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                            "$ref": "#/definitions/in_memory_database.DatabaseCreateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "database created successfully"
+                        "description": "Database created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DatabaseCreateResult"
+                        }
                     },
                     "400": {
-                        "description": "Database already exists"
+                        "description": "Database already exists or error while binding JSON",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/database/connect": {
+            "post": {
+                "description": "Connect to an existing database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "database"
+                ],
+                "summary": "Connect to database",
+                "parameters": [
+                    {
+                        "description": "databaseName, collections",
+                        "name": "requestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DatabaseCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connected successfully",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DatabaseConnectResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Something went wrong or error while binding JSON",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/database/delete": {
             "post": {
-                "description": "To delete database",
+                "description": "To delete a database",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -207,41 +287,59 @@
                 "summary": "Delete database",
                 "parameters": [
                     {
-                        "description": "Database",
-                        "name": "database",
+                        "description": "databaseName",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/router.DatabaseRequestInput"
+                            "$ref": "#/definitions/in_memory_database.DatabaseDeleteRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "database deleted successfully"
+                        "description": "Database deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DatabaseDeleteResult"
+                        }
                     },
                     "400": {
-                        "description": "Unexpected error while delete database"
+                        "description": "Unexpected error while deleting database or error while binding JSON",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
         },
         "/database/get-all": {
             "get": {
-                "description": "To get all database.",
+                "description": "Retrieve a list of all databases",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "database"
                 ],
-                "summary": "Get all database",
+                "summary": "Get all databases",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "List of all databases",
                         "schema": {
                             "type": "array",
                             "items": {
+                                "$ref": "#/definitions/in_memory_database.DatabaseGetAllResult"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "type": "string"
                             }
                         }
@@ -251,7 +349,7 @@
         },
         "/database/load-to-disk": {
             "get": {
-                "description": "Load database to disk.",
+                "description": "Load database to disk for persistence",
                 "produces": [
                     "application/json"
                 ],
@@ -261,10 +359,19 @@
                 "summary": "Load database to disk",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Database loaded to disk successfully",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error loading database to disk",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "type": "string"
                             }
                         }
@@ -272,7 +379,7 @@
                 }
             }
         },
-        "/document/{databaseName}/{collectionName}/": {
+        "/document/add": {
             "post": {
                 "description": "To create new document",
                 "produces": [
@@ -284,26 +391,12 @@
                 "summary": "Create new document",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Document",
-                        "name": "document",
+                        "description": "databaseName, collectionName",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.Document"
+                            "$ref": "#/definitions/in_memory_database.DocumentCreateRequest"
                         }
                     }
                 ],
@@ -317,8 +410,8 @@
                 }
             }
         },
-        "/document/{databaseName}/{collectionName}/all-data": {
-            "get": {
+        "/document/all-data": {
+            "post": {
                 "description": "Read all document",
                 "produces": [
                     "application/json"
@@ -329,18 +422,13 @@
                 "summary": "Read all document",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
+                        "description": "databaseName, collectionName",
+                        "name": "requestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DocumentGetAllRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -359,7 +447,7 @@
                 }
             }
         },
-        "/document/{databaseName}/{collectionName}/filter": {
+        "/document/filter": {
             "post": {
                 "description": "Filter document",
                 "produces": [
@@ -371,26 +459,12 @@
                 "summary": "Filter document",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "MapInterface",
-                        "name": "document",
+                        "description": "databaseName, collectionName, filter",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.MapInterface"
+                            "$ref": "#/definitions/in_memory_database.DocumentFilterRequest"
                         }
                     }
                 ],
@@ -410,7 +484,7 @@
                 }
             }
         },
-        "/document/{databaseName}/{collectionName}/{id}": {
+        "/document/{id}": {
             "get": {
                 "description": "Read document by id.",
                 "produces": [
@@ -422,77 +496,12 @@
                 "summary": "Read by id",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "search document by id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/in_memory_database.Document"
-                        }
-                    },
-                    "400": {
-                        "description": "Database/Collection deleted"
-                    }
-                }
-            },
-            "put": {
-                "description": "To update document",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "document"
-                ],
-                "summary": "Update document",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "update document by id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Document",
-                        "name": "document",
+                        "description": "databaseName, collectionName, docId",
+                        "name": "requestBody",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/in_memory_database.Document"
+                            "$ref": "#/definitions/in_memory_database.DocumentReadRequest"
                         }
                     }
                 ],
@@ -508,7 +517,7 @@
                     }
                 }
             },
-            "delete": {
+            "post": {
                 "description": "To delete document",
                 "produces": [
                     "application/json"
@@ -519,25 +528,13 @@
                 "summary": "Delete document",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "databaseName",
-                        "name": "databaseName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "collectionName",
-                        "name": "collectionName",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "delete document by id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
+                        "description": "databaseName, collectionName, docId",
+                        "name": "requestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/in_memory_database.DocumentDeleteRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -572,6 +569,69 @@
         }
     },
     "definitions": {
+        "in_memory_database.CollectionCreateRequest": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/in_memory_database.CollectionInput"
+                    }
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.CollectionCreateResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.CollectionDeleteRequest": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.CollectionDeleteResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.CollectionGetAllRequest": {
+            "type": "object",
+            "properties": {
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.CollectionGetAllResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "in_memory_database.CollectionInput": {
             "type": "object",
             "properties": {
@@ -588,9 +648,178 @@
                 }
             }
         },
+        "in_memory_database.CollectionStatsRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DatabaseConnectResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/in_memory_database.DatabaseResult"
+                }
+            }
+        },
+        "in_memory_database.DatabaseCreateRequest": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/in_memory_database.CollectionInput"
+                    }
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DatabaseCreateResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DatabaseDeleteRequest": {
+            "type": "object",
+            "properties": {
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DatabaseDeleteResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DatabaseGetAllResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "in_memory_database.DatabaseResult": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
         "in_memory_database.Document": {
             "type": "object",
             "additionalProperties": true
+        },
+        "in_memory_database.DocumentCreateRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                },
+                "document": {
+                    "$ref": "#/definitions/in_memory_database.Document"
+                }
+            }
+        },
+        "in_memory_database.DocumentDeleteRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                },
+                "docId": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DocumentFilterRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                },
+                "filter": {
+                    "$ref": "#/definitions/in_memory_database.MapInterface"
+                }
+            }
+        },
+        "in_memory_database.DocumentGetAllRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DocumentReadRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                },
+                "docId": {
+                    "type": "string"
+                }
+            }
+        },
+        "in_memory_database.DocumentUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "collectionName": {
+                    "type": "string"
+                },
+                "databaseName": {
+                    "type": "string"
+                },
+                "docId": {
+                    "type": "string"
+                },
+                "document": {
+                    "$ref": "#/definitions/in_memory_database.Document"
+                }
+            }
         },
         "in_memory_database.IndexIdsmap": {
             "type": "object",
@@ -612,23 +841,6 @@
             "type": "object",
             "additionalProperties": {
                 "type": "string"
-            }
-        },
-        "router.DatabaseRequestInput": {
-            "type": "object",
-            "properties": {
-                "collections": {
-                    "description": "Example: collections",
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "additionalProperties": true
-                    }
-                },
-                "databaseName": {
-                    "description": "Example: databaseName",
-                    "type": "string"
-                }
             }
         }
     }

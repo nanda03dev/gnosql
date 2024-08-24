@@ -2,9 +2,9 @@
 // @version 1.0
 // @description     No sql database in Go using Gin framework.
 
-// @contact.name   Nanda Kumar
+// @contact.name   NandaKumar
 
-// @contact.url    https://twitter.com/nanda0311
+// @contact.url   https://x.com/nanda03dev
 
 // @contact.email  nanda03dev@gmail.com
 
@@ -73,6 +73,7 @@ func main() {
 
 	// Swagger handler
 	ginRouter.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// EX: localhost:5454/swagger/index.html
 
 	// Start the server in a separate goroutine
 	go func() {
@@ -92,7 +93,7 @@ func main() {
 
 		pb.RegisterGnoSQLServiceServer(s, &grpc_handler.GnoSQLServer{GnoSQL: gnoSQL})
 
-		fmt.Println("Server listening at", lis.Addr())
+		fmt.Println("GRPC server started successfully ", lis.Addr())
 
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to server: %v", err)

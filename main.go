@@ -6,7 +6,7 @@
 
 // @contact.url    https://twitter.com/nanda0311
 
-// @contact.email  nanda23311@gmail.com
+// @contact.email  nanda03dev@gmail.com
 
 // @license.name  Apache 2.0
 
@@ -57,8 +57,13 @@ func main() {
 	fmt.Printf("\n GIN_PORT: %v", GIN_PORT)
 	fmt.Printf("\n GRPC_PORT: %v", GRPC_PORT)
 
+	// Creating gnosql/db folder
 	common.CreateDatabaseFolder()
+
+	// Creating Gnosql
 	var gnoSQL *in_memory_database.GnoSQL = in_memory_database.CreateGnoSQL()
+
+	// Load existing database
 	gnoSQL.LoadAllDBs()
 
 	router.RouterInit(ginRouter, gnoSQL)
@@ -68,6 +73,7 @@ func main() {
 
 	// Swagger handler
 	ginRouter.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// EX: localhost:5454/swagger/index.html
 
 	// Start the server in a separate goroutine
 	go func() {
@@ -87,7 +93,7 @@ func main() {
 
 		pb.RegisterGnoSQLServiceServer(s, &grpc_handler.GnoSQLServer{GnoSQL: gnoSQL})
 
-		log.Printf("\n server listening at %v", lis.Addr())
+		fmt.Println("GRPC server started successfully ", lis.Addr())
 
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to server: %v", err)

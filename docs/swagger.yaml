@@ -1,5 +1,45 @@
 basePath: /api/v1
 definitions:
+  in_memory_database.CollectionCreateRequest:
+    properties:
+      collections:
+        items:
+          $ref: '#/definitions/in_memory_database.CollectionInput'
+        type: array
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.CollectionCreateResult:
+    properties:
+      data:
+        type: string
+    type: object
+  in_memory_database.CollectionDeleteRequest:
+    properties:
+      collections:
+        items:
+          type: string
+        type: array
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.CollectionDeleteResult:
+    properties:
+      data:
+        type: string
+    type: object
+  in_memory_database.CollectionGetAllRequest:
+    properties:
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.CollectionGetAllResult:
+    properties:
+      data:
+        items:
+          type: string
+        type: array
+    type: object
   in_memory_database.CollectionInput:
     properties:
       collectionName:
@@ -11,8 +51,116 @@ definitions:
           type: string
         type: array
     type: object
+  in_memory_database.CollectionStatsRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.DatabaseConnectResult:
+    properties:
+      data:
+        $ref: '#/definitions/in_memory_database.DatabaseResult'
+    type: object
+  in_memory_database.DatabaseCreateRequest:
+    properties:
+      collections:
+        items:
+          $ref: '#/definitions/in_memory_database.CollectionInput'
+        type: array
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.DatabaseCreateResult:
+    properties:
+      data:
+        type: string
+      error:
+        type: string
+    type: object
+  in_memory_database.DatabaseDeleteRequest:
+    properties:
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.DatabaseDeleteResult:
+    properties:
+      data:
+        type: string
+    type: object
+  in_memory_database.DatabaseGetAllResult:
+    properties:
+      data:
+        items:
+          type: string
+        type: array
+    type: object
+  in_memory_database.DatabaseResult:
+    properties:
+      collections:
+        items:
+          type: string
+        type: array
+      databaseName:
+        type: string
+    type: object
   in_memory_database.Document:
     additionalProperties: true
+    type: object
+  in_memory_database.DocumentCreateRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+      document:
+        $ref: '#/definitions/in_memory_database.Document'
+    type: object
+  in_memory_database.DocumentDeleteRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+      docId:
+        type: string
+    type: object
+  in_memory_database.DocumentFilterRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+      filter:
+        $ref: '#/definitions/in_memory_database.MapInterface'
+    type: object
+  in_memory_database.DocumentGetAllRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+    type: object
+  in_memory_database.DocumentReadRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+      docId:
+        type: string
+    type: object
+  in_memory_database.DocumentUpdateRequest:
+    properties:
+      collectionName:
+        type: string
+      databaseName:
+        type: string
+      docId:
+        type: string
+      document:
+        $ref: '#/definitions/in_memory_database.Document'
     type: object
   in_memory_database.IndexIdsmap:
     additionalProperties:
@@ -29,22 +177,10 @@ definitions:
     additionalProperties:
       type: string
     type: object
-  router.DatabaseRequestInput:
-    properties:
-      collections:
-        description: 'Example: collections'
-        items:
-          additionalProperties: true
-          type: object
-        type: array
-      databaseName:
-        description: 'Example: databaseName'
-        type: string
-    type: object
 host: localhost:5454
 info:
   contact:
-    email: nanda23311@gmail.com
+    email: nanda03dev@gmail.com
     name: Nanda Kumar
     url: https://twitter.com/nanda0311
   description: No sql database in Go using Gin framework.
@@ -54,252 +190,254 @@ info:
   title: GnoSQL Database
   version: "1.0"
 paths:
-  /collection/{databaseName}/{collectionName}/stats:
-    get:
-      description: Collection stats
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/in_memory_database.IndexMap'
-        "400":
-          description: Database/Collection deleted
-      summary: Collection stats
-      tags:
-      - collection
-  /collection/{databaseName}/add:
+  /collection/add:
     post:
-      description: To create new collection.
+      consumes:
+      - application/json
+      description: To create a new collection in a specific database
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: Collection
+      - description: databaseName, collections
         in: body
-        name: collection
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/in_memory_database.CollectionInput'
+          $ref: '#/definitions/in_memory_database.CollectionCreateRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: collection created successfully
+          description: Collection created successfully
+          schema:
+            $ref: '#/definitions/in_memory_database.CollectionCreateResult'
         "400":
-          description: collection already exists
+          description: Collection already exists or error while binding JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Create new collection
       tags:
       - collection
-  /collection/{databaseName}/delete:
+  /collection/delete:
     post:
-      description: To delete collection
+      consumes:
+      - application/json
+      description: To delete a collection from a specific database
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collection
+      - description: databaseName, collections
         in: body
-        name: collection
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
+          $ref: '#/definitions/in_memory_database.CollectionDeleteRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: collection deleted successfully
+          description: Collection deleted successfully
+          schema:
+            $ref: '#/definitions/in_memory_database.CollectionDeleteResult'
         "400":
-          description: Unexpected error while delete collection
+          description: Unexpected error while deleting collection or error while binding
+            JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Delete collection
       tags:
       - collection
-  /collection/{databaseName}/get-all:
-    get:
-      description: To get all collections
+  /collection/get-all:
+    post:
+      description: Retrieve all collections from a specific database
       parameters:
       - description: databaseName
-        in: path
-        name: databaseName
+        in: body
+        name: requestBody
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/in_memory_database.CollectionGetAllRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: List of all collections
           schema:
             items:
-              type: string
+              $ref: '#/definitions/in_memory_database.CollectionGetAllResult'
             type: array
+        "400":
+          description: Error while fetching collections or invalid database
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Get all collections
+      tags:
+      - collection
+  /collection/stats:
+    post:
+      description: Retrieve statistics for a specific collection in a database
+      parameters:
+      - description: databaseName, collectionName
+        in: body
+        name: requestBody
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.CollectionStatsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Collection statistics
+          schema:
+            $ref: '#/definitions/in_memory_database.IndexMap'
+        "400":
+          description: Database or Collection not found or deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Collection stats
       tags:
       - collection
   /database/add:
     post:
-      description: To create new database
+      consumes:
+      - application/json
+      description: To create a new database
       parameters:
-      - description: Database
+      - description: Database creation request containing databaseName and collections
         in: body
-        name: database
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
+          $ref: '#/definitions/in_memory_database.DatabaseCreateRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: database created successfully
+          description: Database created successfully
+          schema:
+            $ref: '#/definitions/in_memory_database.DatabaseCreateResult'
         "400":
-          description: Database already exists
+          description: Database already exists or error while binding JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Create new database
+      tags:
+      - database
+  /database/connect:
+    post:
+      consumes:
+      - application/json
+      description: Connect to an existing database
+      parameters:
+      - description: databaseName, collections
+        in: body
+        name: requestBody
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.DatabaseCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Connected successfully
+          schema:
+            $ref: '#/definitions/in_memory_database.DatabaseConnectResult'
+        "400":
+          description: Something went wrong or error while binding JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Connect to database
       tags:
       - database
   /database/delete:
     post:
-      description: To delete database
+      consumes:
+      - application/json
+      description: To delete a database
       parameters:
-      - description: Database
+      - description: databaseName
         in: body
-        name: database
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/router.DatabaseRequestInput'
+          $ref: '#/definitions/in_memory_database.DatabaseDeleteRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: database deleted successfully
+          description: Database deleted successfully
+          schema:
+            $ref: '#/definitions/in_memory_database.DatabaseDeleteResult'
         "400":
-          description: Unexpected error while delete database
+          description: Unexpected error while deleting database or error while binding
+            JSON
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Delete database
       tags:
       - database
   /database/get-all:
     get:
-      description: To get all database.
+      description: Retrieve a list of all databases
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: List of all databases
           schema:
             items:
-              type: string
+              $ref: '#/definitions/in_memory_database.DatabaseGetAllResult'
             type: array
-      summary: Get all database
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all databases
       tags:
       - database
   /database/load-to-disk:
     get:
-      description: Load database to disk.
+      description: Load database to disk for persistence
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Database loaded to disk successfully
           schema:
-            items:
+            additionalProperties:
               type: string
-            type: array
+            type: object
+        "500":
+          description: Error loading database to disk
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Load database to disk
       tags:
       - database
-  /document/{databaseName}/{collectionName}/:
-    post:
-      description: To create new document
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      - description: Document
-        in: body
-        name: document
-        required: true
-        schema:
-          $ref: '#/definitions/in_memory_database.Document'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Document created successfully
-        "400":
-          description: Database/Collection deleted
-      summary: Create new document
-      tags:
-      - document
-  /document/{databaseName}/{collectionName}/{id}:
-    delete:
-      description: To delete document
-      parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      - description: delete document by id
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/in_memory_database.Document'
-        "400":
-          description: Database/Collection deleted
-      summary: Delete document
-      tags:
-      - document
+  /document/{id}:
     get:
       description: Read document by id.
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
+      - description: databaseName, collectionName, docId
+        in: body
+        name: requestBody
         required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      - description: search document by id
-        in: path
-        name: id
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/in_memory_database.DocumentReadRequest'
       produces:
       - application/json
       responses:
@@ -312,30 +450,15 @@ paths:
       summary: Read by id
       tags:
       - document
-    put:
-      description: To update document
+    post:
+      description: To delete document
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      - description: update document by id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Document
+      - description: databaseName, collectionName, docId
         in: body
-        name: document
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/in_memory_database.Document'
+          $ref: '#/definitions/in_memory_database.DocumentDeleteRequest'
       produces:
       - application/json
       responses:
@@ -345,23 +468,39 @@ paths:
             $ref: '#/definitions/in_memory_database.Document'
         "400":
           description: Database/Collection deleted
-      summary: Update document
+      summary: Delete document
       tags:
       - document
-  /document/{databaseName}/{collectionName}/all-data:
-    get:
+  /document/add:
+    post:
+      description: To create new document
+      parameters:
+      - description: databaseName, collectionName
+        in: body
+        name: requestBody
+        required: true
+        schema:
+          $ref: '#/definitions/in_memory_database.DocumentCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Document created successfully
+        "400":
+          description: Database/Collection deleted
+      summary: Create new document
+      tags:
+      - document
+  /document/all-data:
+    post:
       description: Read all document
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
+      - description: databaseName, collectionName
+        in: body
+        name: requestBody
         required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/in_memory_database.DocumentGetAllRequest'
       produces:
       - application/json
       responses:
@@ -376,26 +515,16 @@ paths:
       summary: Read all document
       tags:
       - document
-  /document/{databaseName}/{collectionName}/filter:
+  /document/filter:
     post:
       description: Filter document
       parameters:
-      - description: databaseName
-        in: path
-        name: databaseName
-        required: true
-        type: string
-      - description: collectionName
-        in: path
-        name: collectionName
-        required: true
-        type: string
-      - description: MapInterface
+      - description: databaseName, collectionName, filter
         in: body
-        name: document
+        name: requestBody
         required: true
         schema:
-          $ref: '#/definitions/in_memory_database.MapInterface'
+          $ref: '#/definitions/in_memory_database.DocumentFilterRequest'
       produces:
       - application/json
       responses:

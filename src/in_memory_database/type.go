@@ -99,9 +99,9 @@ type DocumentReadResult struct {
 }
 
 type DocumentFilterRequest struct {
-	DatabaseName   string `json:"databaseName"`
-	CollectionName string `json:"collectionName"`
-	Filter         MapInterface
+	DatabaseName   string       `json:"databaseName"`
+	CollectionName string       `json:"collectionName"`
+	Filter         MapInterface `json:"filter"`
 }
 
 type DocumentFilterResult struct {
