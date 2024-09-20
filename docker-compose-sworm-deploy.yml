@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+    gnosql:
+        image: gnosql-local:latest
+        ports:
+            # <<local host port >>:<<container port>>
+            - 5454:5454
+            - 5455:5455
+        volumes:
+            - gnosqldb-data-local:/root/gnosql/db/
+        environment:
+            GIN_PORT: 5454
+            GRPC_PORT: 5455
+            GIN_MODE: debug
+        deploy:
+            replicas: 3  # Define how many replicas to run
+            restart_policy:
+                condition: on-failure
+volumes:
+    gnosqldb-data-local:
+        name: gnosqldb-data-local
